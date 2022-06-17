@@ -8,14 +8,11 @@ This program implements parsing for the Simply Type Lambda Calculus (STLC) with 
 <abstr>    :== '(\' <varAnnotated> '.' <expr> ')'
 <appl>     :== '(' <expr> '$' <expr> ')'
 
-<varPlain>     :== <lowercaseAlpha>
+<varPlain>     :== <varName>
 <varAnnotated> :== <varName> | <varName> ':' <type>
+<varName>      :== <lowercaseAlpha>
 
 <type>         :== <typeVar> | <functionType>
 <typeVar>      :== <capitalizedAlpha>
 <functionType> :== <type> '->' <type>
 ```
-
-## TODO
-
-- Allow for whitespace

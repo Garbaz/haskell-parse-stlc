@@ -1,4 +1,10 @@
+-- Not related to the rest of the code.
+-- This is from a tutorial introducing parser combinators in Haskell:
+-- https://two-wrongs.com/parser-combinators-parsing-for-haskell-beginners
+
+
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+
 {-# HLINT ignore "Use <$>" #-}
 module Metar where
 
@@ -70,4 +76,3 @@ metar = do
   time <- timestamp
   wind <- windInfo
   return (Report code time wind)
-
