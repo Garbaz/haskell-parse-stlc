@@ -1,6 +1,6 @@
 # STLC parser
 
-This program implements parsing for the Simply Type Lambda Calculus (STLC) with optional type annotation for the argument of an Abstraction term. For this purpose `<expr>` has the following grammar:
+This program implements parsing for the Simply Type Lambda Calculus (STLC) with optional type annotation for the argument of an Abstraction term. For this purpose a term `<expr>` has the following grammar:
 
 ```
 <expr>     ::= <variable> | <abstr> | <appl>
@@ -16,3 +16,5 @@ This program implements parsing for the Simply Type Lambda Calculus (STLC) with 
 <typeVar>      ::= <capitalizedAlpha>
 <functionType> ::= <type> '->' <type>
 ```
+
+(Whitespace is entirely ignored)
