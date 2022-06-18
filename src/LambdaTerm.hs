@@ -24,7 +24,7 @@ data Const
 data LambdaTerm
   = Variable String
   | Constant Const
-  | Abstraction {var' :: String, varType' :: TypeTerm, body' :: LambdaTerm}
+  | Abstraction {var' :: String, varType' :: Maybe TypeTerm, body' :: LambdaTerm}
   | Appliction {func' :: LambdaTerm, arg' :: LambdaTerm}
   | Conditional {cond' :: LambdaTerm, then' :: LambdaTerm, else' :: LambdaTerm}
   deriving (Show)
@@ -35,11 +35,10 @@ lambdaTerm = conditional <++ application <++ abstraction <++ constant <++ variab
 varPlain :: ReadP String
 varPlain = many1 lowercase
 
-varAnnotated :: ReadP (String, TypeTerm)
+varAnnotated :: ReadP (String, Maybe TypeTerm)
 varAnnotated = do
   name <- varPlain
-  char ':'
-  typeTerm <- typeTerm
+  typeTerm <- option Nothing (char ':' >> Just <$> typeTerm)
   return (name, typeTerm)
 
 variable :: ReadP LambdaTerm

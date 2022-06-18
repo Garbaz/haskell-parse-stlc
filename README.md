@@ -1,6 +1,6 @@
-# STLC parser
+# STLC Parser
 
-This program implements parsing for the Simply Type Lambda Calculus (STLC). For this purpose a term `Expr` has the following grammar:
+An implementation of parsing for a Simply Type Lambda Calculus (STLC) grammar:
 
 ```
 Expr ::= Const | Variable | Abstr | Appl | Cond
@@ -11,9 +11,9 @@ Abstr    ::= '(\' Var ':' Type '.' Expr ')'
 Appl     ::= '(' Expr '$' Expr ')'
 Cond     ::= '(' Expr '?' Expr '::' Expr ')'
 
-Var := <lowercase>
+Var ::= <lowercase>
 
-Type         ::= TypeConst | TypeVar | FunctionType
+Type ::= TypeConst | TypeVar | FunctionType
 
 TypeConst    ::= Unit | Bool | Int
 TypeVar      ::= <capitalized>
