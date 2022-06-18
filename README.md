@@ -7,13 +7,11 @@ Expr ::= Const | Variable | Abstr | Appl | Cond
 
 Const    ::= unit | true | false | <numeral>
 Variable ::= VarPlain | '(' VarPlain ')'
-Abstr    ::= '(\' VarAnnotated '.' Expr ')'
+Abstr    ::= '(\' Var ':' Type '.' Expr ')'
 Appl     ::= '(' Expr '$' Expr ')'
 Cond     ::= '(' Expr '?' Expr '::' Expr ')'
 
-VarPlain     ::= VarName
-VarAnnotated ::= VarName | VarName ':' Type
-VarName      ::= <lowercase>
+Var := <lowercase>
 
 Type         ::= TypeConst | TypeVar | FunctionType
 

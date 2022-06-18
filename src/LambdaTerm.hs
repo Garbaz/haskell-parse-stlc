@@ -3,7 +3,7 @@
 {-# HLINT ignore "Use <$>" #-}
 
 module LambdaTerm
-  ( Var (..),
+  ( -- Var (..),
     Const (..),
     LambdaTerm (..),
     lambdaTerm,
@@ -15,9 +15,6 @@ import ParsingCommon
 import Text.ParserCombinators.ReadP
 import TypeTerm
 
-data Var = Var {name' :: String, maybeType' :: Maybe TypeTerm}
-  deriving (Show)
-
 data Const
   = Unit
   | Integer Int
@@ -25,9 +22,9 @@ data Const
   deriving (Show)
 
 data LambdaTerm
-  = Variable Var
+  = Variable String
   | Constant Const
-  | Abstraction {var' :: Var, body' :: LambdaTerm}
+  | Abstraction {var' :: String, varType' :: TypeTerm, body' :: LambdaTerm}
   | Appliction {func' :: LambdaTerm, arg' :: LambdaTerm}
   | Conditional {cond' :: LambdaTerm, then' :: LambdaTerm, else' :: LambdaTerm}
   deriving (Show)
@@ -35,16 +32,15 @@ data LambdaTerm
 lambdaTerm :: ReadP LambdaTerm
 lambdaTerm = conditional <++ application <++ abstraction <++ constant <++ variable
 
-varPlain :: ReadP Var
-varPlain = do
-  name <- many1 lowercase
-  return (Var name Nothing)
+varPlain :: ReadP String
+varPlain = many1 lowercase
 
-varAnnotated :: ReadP Var
+varAnnotated :: ReadP (String, TypeTerm)
 varAnnotated = do
-  varPlain <- varPlain
-  maybeTypeTerm <- option Nothing (char ':' >> Just <$> typeTerm)
-  return (Var (name' varPlain) maybeTypeTerm)
+  name <- varPlain
+  char ':'
+  typeTerm <- typeTerm
+  return (name, typeTerm)
 
 variable :: ReadP LambdaTerm
 variable = perhaps bracketed $ Variable <$> varPlain
@@ -63,10 +59,10 @@ constant =
 abstraction :: ReadP LambdaTerm
 abstraction = bracketed $ do
   char '\\'
-  var <- varAnnotated
+  (name, maybeVarType) <- varAnnotated
   char '.'
   body <- lambdaTerm
-  return (Abstraction var body)
+  return (Abstraction name maybeVarType body)
 
 application :: ReadP LambdaTerm
 application = bracketed $ do
