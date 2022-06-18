@@ -14,7 +14,7 @@ This program implements parsing for the Simply Type Lambda Calculus (STLC) with 
 
 <type>         ::= <typeVar> | <functionType>
 <typeVar>      ::= <capitalizedAlpha>
-<functionType> ::= <type> '->' <type>
+<functionType> ::= '(' <type> '->' <type> ')'
 ```
 
 (Whitespace is entirely ignored)
