@@ -2,8 +2,8 @@
 
 This program implements parsing for the Simply Type Lambda Calculus (STLC) with optional type annotation for the argument of an Abstraction term. For this purpose a term `Expr` has the following grammar:
 
-```
-Expr ::= Variable | Abstr | Appl | Cond
+```hs
+Expr ::= Const | Variable | Abstr | Appl | Cond
 
 Const    ::= unit | true | false | <numeral>
 Variable ::= VarPlain | '(' VarPlain ')'
@@ -15,7 +15,7 @@ VarPlain     ::= VarName
 VarAnnotated ::= VarName | VarName ':' Type
 VarName      ::= <lowercase>
 
-Type         ::= TypeVar | FunctionType
+Type         ::= TypeConst | TypeVar | FunctionType
 
 TypeConst    ::= Unit | Bool | Int
 TypeVar      ::= <capitalized>
