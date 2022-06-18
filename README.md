@@ -1,6 +1,6 @@
 # STLC parser
 
-This program implements parsing for the Simply Type Lambda Calculus (STLC) with optional type annotation for the argument of an Abstraction term. For this purpose a term `Expr` has the following grammar:
+This program implements parsing for the Simply Type Lambda Calculus (STLC). For this purpose a term `Expr` has the following grammar:
 
 ```
 Expr ::= Const | Variable | Abstr | Appl | Cond
