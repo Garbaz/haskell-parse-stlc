@@ -7,17 +7,17 @@ Expr ::= Const | Variable | Abstr | Appl | Cond
 
 Const    ::= unit | true | false | <numeral>
 Variable ::= VarPlain | '(' VarPlain ')'
-Abstr    ::= '(\' Var ':' Type '.' Expr ')'
+Abstr    ::= '\' Var ':' Type '.' Expr | '(' '\' Var ':' Type '.' Expr ')'
 Appl     ::= '(' Expr '$' Expr ')'
 Cond     ::= '(' Expr '?' Expr '::' Expr ')'
 
 Var ::= <lowercase>
 
-Type ::= TypeConst | TypeVar | FunctionType
+Type ::= TypeConst | TypeVar | TypeFunction
 
 TypeConst    ::= Unit | Bool | Int
 TypeVar      ::= <capitalized>
-FunctionType ::= '(' Type '->' Type ')'
+TypeFunction ::= '(' Type '->' Type ')'
 ```
 
 (Whitespace is entirely ignored)

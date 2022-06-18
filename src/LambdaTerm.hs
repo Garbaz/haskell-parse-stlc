@@ -56,7 +56,7 @@ constant =
   perhaps bracketed $ Constant <$> constPlain
 
 abstraction :: ReadP LambdaTerm
-abstraction = bracketed $ do
+abstraction = perhaps bracketed $ do
   char '\\'
   (name, maybeVarType) <- varAnnotated
   char '.'

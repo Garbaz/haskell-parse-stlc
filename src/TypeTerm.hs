@@ -20,7 +20,7 @@ data BaseType
 data TypeTerm
   = TypeVariable String
   | TypeConstant BaseType
-  | FunctionType {from' :: TypeTerm, to' :: TypeTerm}
+  | TypeFunction {from' :: TypeTerm, to' :: TypeTerm}
   deriving (Show)
 
 typeTerm :: ReadP TypeTerm
@@ -43,4 +43,4 @@ functionType = bracketed $ do
   from <- typeTerm
   string "->"
   to <- typeTerm
-  return (FunctionType from to)
+  return (TypeFunction from to)
