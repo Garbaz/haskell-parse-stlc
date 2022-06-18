@@ -46,7 +46,7 @@ data LambdaTerm
   deriving (Show)
 
 lambdaTerm :: ReadP LambdaTerm
-lambdaTerm = conditional <|> application <|> abstraction <|> constant <|> variable
+lambdaTerm = variable <|> constant <|> abstraction <|> application <|> conditional
 
 varPlain :: ReadP String
 varPlain = many1 lowercase
@@ -73,8 +73,7 @@ constPlain =
     <|> (string "not" $> Not)
 
 constant :: ReadP LambdaTerm
-constant =
-  perhaps bracketed $ Constant <$> constPlain
+constant = perhaps bracketed $ Constant <$> constPlain
 
 abstraction :: ReadP LambdaTerm
 abstraction = perhaps bracketed $ do
