@@ -2,28 +2,41 @@
 
 {-# HLINT ignore "Use <$>" #-}
 module TypeTerm
-  ( TypeVar,
-    TypeTerm,
+  ( TypeTerm (..),
     typeTerm,
+    BaseType (..),
   )
 where
 
 import ParsingCommon
 import Text.ParserCombinators.ReadP
 
-newtype TypeVar = TypeVar {name :: String}
+data BaseType
+  = UnitType
+  | BooleanType
+  | IntegerType
   deriving (Show)
 
 data TypeTerm
-  = TypeVariable {var :: TypeVar}
-  | FunctionType {from :: TypeTerm, to :: TypeTerm}
+  = TypeVariable String
+  | TypeConstant BaseType
+  | FunctionType {from' :: TypeTerm, to' :: TypeTerm}
   deriving (Show)
 
 typeTerm :: ReadP TypeTerm
-typeTerm = typeVariable <++ functionType
+typeTerm = functionType <++ typeConstant <++ typeVariable
 
 typeVariable :: ReadP TypeTerm
-typeVariable = perhaps bracketed $ TypeVariable . TypeVar <$> capitalized
+typeVariable = perhaps bracketed $ TypeVariable <$> capitalized
+
+typeConstant :: ReadP TypeTerm
+typeConstant =
+  perhaps bracketed $
+    TypeConstant
+      <$> ( (string "Unit" >> return UnitType)
+              <++ (string "Bool" >> return BooleanType)
+              <++ (string "Int" >> return IntegerType)
+          )
 
 functionType :: ReadP TypeTerm
 functionType = bracketed $ do

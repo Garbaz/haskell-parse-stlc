@@ -4,28 +4,30 @@ module ParsingCommon where
 
 import Text.ParserCombinators.ReadP
 
-lowerCase :: ReadP Char
-lowerCase = satisfy (\c -> 'a' <= c && c <= 'z')
+lowercase :: ReadP Char
+lowercase = satisfy (\c -> 'a' <= c && c <= 'z')
 
-upperCase :: ReadP Char
-upperCase = satisfy (\c -> 'A' <= c && c <= 'Z')
+uppercase :: ReadP Char
+uppercase = satisfy (\c -> 'A' <= c && c <= 'Z')
+
+numeral :: ReadP Int
+numeral = read <$> many1 (satisfy (\c -> '0' <= c && c <= '9'))
 
 capitalized :: ReadP String
 capitalized = do
-  hd <- upperCase
-  tl <- many lowerCase
+  hd <- uppercase
+  tl <- many lowercase
   return (hd : tl)
 
 bracketed :: ReadP a -> ReadP a
 bracketed = between (char '(') (char ')')
-
 
 perhaps :: (ReadP a -> ReadP a) -> ReadP a -> ReadP a
 -- ^ Tries first to parse the first argument applied to the second (@o p@)
 --   and if that fails, tries the second argument on it's own (@p@).
 --
 --   Example:
--- 
+--
 --       @readP_to_S (perhaps bracketed (char 'x')) "(x)"  -- => 'x'@
 --
 --       @readP_to_S (perhaps bracketed (char 'x')) "x"    -- => 'x'@
