@@ -10,6 +10,7 @@ where
 
 import ParsingCommon
 import Text.ParserCombinators.ReadP
+import Control.Applicative ((<|>))
 
 data BaseType
   = UnitType
@@ -24,7 +25,7 @@ data TypeTerm
   deriving (Show)
 
 typeTerm :: ReadP TypeTerm
-typeTerm = functionType <++ typeConstant <++ typeVariable
+typeTerm = functionType <|> typeConstant <|> typeVariable
 
 typeVariable :: ReadP TypeTerm
 typeVariable = perhaps bracketed $ TypeVariable <$> capitalized

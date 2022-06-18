@@ -5,13 +5,14 @@ An implementation of parsing for a Simply Type Lambda Calculus (STLC) grammar:
 ```
 Expr ::= Const | Variable | Abstr | Appl | Cond
 
-Const    ::= unit | true | false | <numeral>
+Const    ::= unit | true | false | <numeral> | add | mul | or | and
 Variable ::= VarPlain | '(' VarPlain ')'
-Abstr    ::= '\' Var ':' Type '.' Expr | '(' '\' Var ':' Type '.' Expr ')'
+Abstr    ::= '\' VarAnn ':' Type '.' Expr | '(' '\' VarAnn ':' Type '.' Expr ')'
 Appl     ::= '(' Expr '$' Expr ')'
 Cond     ::= '(' Expr '?' Expr '::' Expr ')'
 
-Var ::= <lowercase>
+Var    ::= <lowercase>
+VarAnn ::= Var | Var : Type
 
 Type ::= TypeConst | TypeVar | TypeFunction
 

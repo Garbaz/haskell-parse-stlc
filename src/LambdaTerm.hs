@@ -10,6 +10,7 @@ module LambdaTerm
   )
 where
 
+import Control.Applicative ((<|>))
 import Data.Functor (($>), (<&>))
 import ParsingCommon
 import Text.ParserCombinators.ReadP
@@ -19,6 +20,10 @@ data Const
   = Unit
   | Integer Int
   | Boolean Bool
+  | Addition
+  | Multiplication
+  | Or
+  | And
   deriving (Show)
 
 data LambdaTerm
@@ -30,7 +35,7 @@ data LambdaTerm
   deriving (Show)
 
 lambdaTerm :: ReadP LambdaTerm
-lambdaTerm = conditional <++ application <++ abstraction <++ constant <++ variable
+lambdaTerm = conditional <|> application <|> abstraction <|> constant <|> variable
 
 varPlain :: ReadP String
 varPlain = many1 lowercase
@@ -47,9 +52,13 @@ variable = perhaps bracketed $ Variable <$> varPlain
 constPlain :: ReadP Const
 constPlain =
   (string "unit" >> return Unit)
-    <++ (string "true" $> Boolean False)
-    <++ (string "false " $> Boolean False)
-    <++ (numeral <&> Integer)
+    <|> (string "true" $> Boolean False)
+    <|> (string "false " $> Boolean False)
+    <|> (numeral <&> Integer)
+    <|> (string "add" $> Addition)
+    <|> (string "mul" $> Multiplication)
+    <|> (string "or" $> Or)
+    <|> (string "and" $> And)
 
 constant :: ReadP LambdaTerm
 constant =
