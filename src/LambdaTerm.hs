@@ -48,7 +48,7 @@ data LambdaTerm
   deriving (Show)
 
 lambdaTerm :: ReadP LambdaTerm
-lambdaTerm = variable  <|> constant <|> abstraction <|> application <|> conditional
+lambdaTerm = variable <|> constant <|> abstraction <|> application <|> conditional
 
 varPlain :: ReadP String
 varPlain = many1 lowercase
