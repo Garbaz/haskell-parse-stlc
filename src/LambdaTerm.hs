@@ -1,3 +1,4 @@
+-- Variable "false" ???????????
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 {-# HLINT ignore "Use <$>" #-}
@@ -7,6 +8,7 @@ module LambdaTerm
     Const (..),
     LambdaTerm (..),
     lambdaTerm,
+    constant,
   )
 where
 
@@ -41,12 +43,12 @@ data LambdaTerm
   = Variable String
   | Constant Const
   | Abstraction {var' :: String, varType' :: Maybe TypeTerm, body' :: LambdaTerm}
-  | Appliction {func' :: LambdaTerm, arg' :: LambdaTerm}
+  | Application {func' :: LambdaTerm, arg' :: LambdaTerm}
   | Conditional {cond' :: LambdaTerm, then' :: LambdaTerm, else' :: LambdaTerm}
   deriving (Show)
 
 lambdaTerm :: ReadP LambdaTerm
-lambdaTerm = variable <|> constant <|> abstraction <|> application <|> conditional
+lambdaTerm = variable  <|> constant <|> abstraction <|> application <|> conditional
 
 varPlain :: ReadP String
 varPlain = many1 lowercase
@@ -62,9 +64,9 @@ variable = perhaps bracketed $ Variable <$> varPlain
 
 constPlain :: ReadP Const
 constPlain =
-  (string "unit" >> return Unit)
-    <|> (string "true" $> Boolean False)
-    <|> (string "false " $> Boolean False)
+  (string "unit" $> Unit)
+    <|> (string "true" $> Boolean True)
+    <|> (string "false" $> Boolean False)
     <|> (numeral <&> Integer)
     <|> (string "add" $> Addition)
     <|> (string "mul" $> Multiplication)
@@ -88,7 +90,7 @@ application = bracketed $ do
   func <- lambdaTerm
   char '$'
   arg <- lambdaTerm
-  return (Appliction func arg)
+  return (Application func arg)
 
 conditional :: ReadP LambdaTerm
 conditional = bracketed $ do
