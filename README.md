@@ -12,9 +12,13 @@ Appl     ::= '(' Expr '$' Expr ')'
 Cond     ::= '(' Expr '?' Expr '::' Expr ')'
 
 Var    ::= <lowercase>
-VarAnn ::= Var | Var : Type
+VarAnn ::= Var : Type
 
-Type ::= TypeConst | TypeVar | TypeFunction
+Type ::= TypeTag '~' TypeExpr | TypeExpr
+
+TypeTag ::= '\'' <lowercase>
+
+TypeExpr ::= TypeConst | TypeVar | TypeFunction
 
 TypeConst    ::= Unit | Bool | Int
 TypeVar      ::= <capitalized>

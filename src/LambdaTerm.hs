@@ -1,4 +1,3 @@
--- Variable "false" ???????????
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 {-# HLINT ignore "Use <$>" #-}
@@ -29,20 +28,59 @@ data Const
   | Not
   deriving (Show)
 
-typeOf :: Const -> TypeTerm
+typeOf :: Const -> TypeExpr
 typeOf Unit = TypeConstant UnitType
 typeOf (Integer _) = TypeConstant IntegerType
 typeOf (Boolean _) = TypeConstant BooleanType
-typeOf Addition = TypeFunction (TypeConstant IntegerType) (TypeFunction (TypeConstant IntegerType) (TypeConstant IntegerType))
-typeOf Multiplication = TypeFunction (TypeConstant IntegerType) (TypeFunction (TypeConstant IntegerType) (TypeConstant IntegerType))
-typeOf Or = TypeFunction (TypeConstant BooleanType) (TypeFunction (TypeConstant BooleanType) (TypeConstant BooleanType))
-typeOf And = TypeFunction (TypeConstant BooleanType) (TypeFunction (TypeConstant BooleanType) (TypeConstant BooleanType))
-typeOf Not = TypeFunction (TypeConstant BooleanType) (TypeConstant BooleanType)
+typeOf Addition =
+  TypeFunction
+    (TypeTerm Nothing (TypeConstant IntegerType))
+    ( TypeTerm
+        Nothing
+        ( TypeFunction
+            (TypeTerm Nothing (TypeConstant IntegerType))
+            (TypeTerm Nothing (TypeConstant IntegerType))
+        )
+    )
+typeOf Multiplication =
+  TypeFunction
+    (TypeTerm Nothing (TypeConstant IntegerType))
+    ( TypeTerm
+        Nothing
+        ( TypeFunction
+            (TypeTerm Nothing (TypeConstant IntegerType))
+            (TypeTerm Nothing (TypeConstant IntegerType))
+        )
+    )
+typeOf Or =
+  TypeFunction
+    (TypeTerm Nothing (TypeConstant BooleanType))
+    ( TypeTerm
+        Nothing
+        ( TypeFunction
+            (TypeTerm Nothing (TypeConstant BooleanType))
+            (TypeTerm Nothing (TypeConstant BooleanType))
+        )
+    )
+typeOf And =
+  TypeFunction
+    (TypeTerm Nothing (TypeConstant BooleanType))
+    ( TypeTerm
+        Nothing
+        ( TypeFunction
+            (TypeTerm Nothing (TypeConstant BooleanType))
+            (TypeTerm Nothing (TypeConstant BooleanType))
+        )
+    )
+typeOf Not =
+  TypeFunction
+    (TypeTerm Nothing (TypeConstant BooleanType))
+    (TypeTerm Nothing (TypeConstant BooleanType))
 
 data LambdaTerm
   = Variable String
   | Constant Const
-  | Abstraction {var' :: String, varType' :: Maybe TypeTerm, body' :: LambdaTerm}
+  | Abstraction {var' :: String, varType' :: TypeTerm, body' :: LambdaTerm}
   | Application {func' :: LambdaTerm, arg' :: LambdaTerm}
   | Conditional {cond' :: LambdaTerm, then' :: LambdaTerm, else' :: LambdaTerm}
   deriving (Show)
@@ -53,10 +91,10 @@ lambdaTerm = variable <|> constant <|> abstraction <|> application <|> condition
 varPlain :: ReadP String
 varPlain = many1 lowercase
 
-varAnnotated :: ReadP (String, Maybe TypeTerm)
+varAnnotated :: ReadP (String, TypeTerm)
 varAnnotated = do
   name <- varPlain
-  typeTerm <- option Nothing (char ':' >> Just <$> typeTerm)
+  typeTerm <- char ':' >> typeTerm
   return (name, typeTerm)
 
 variable :: ReadP LambdaTerm
@@ -80,10 +118,10 @@ constant = perhaps bracketed $ Constant <$> constPlain
 abstraction :: ReadP LambdaTerm
 abstraction = perhaps bracketed $ do
   char '\\'
-  (name, maybeVarType) <- varAnnotated
+  (varName, varType) <- varAnnotated
   char '.'
   body <- lambdaTerm
-  return (Abstraction name maybeVarType body)
+  return (Abstraction varName varType body)
 
 application :: ReadP LambdaTerm
 application = bracketed $ do
