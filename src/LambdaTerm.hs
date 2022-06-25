@@ -28,55 +28,6 @@ data Const
   | Not
   deriving (Show)
 
-typeOf :: Const -> TypeExpr
-typeOf Unit = TypeConstant UnitType
-typeOf (Integer _) = TypeConstant IntegerType
-typeOf (Boolean _) = TypeConstant BooleanType
-typeOf Addition =
-  TypeFunction
-    (TypeTerm Nothing (TypeConstant IntegerType))
-    ( TypeTerm
-        Nothing
-        ( TypeFunction
-            (TypeTerm Nothing (TypeConstant IntegerType))
-            (TypeTerm Nothing (TypeConstant IntegerType))
-        )
-    )
-typeOf Multiplication =
-  TypeFunction
-    (TypeTerm Nothing (TypeConstant IntegerType))
-    ( TypeTerm
-        Nothing
-        ( TypeFunction
-            (TypeTerm Nothing (TypeConstant IntegerType))
-            (TypeTerm Nothing (TypeConstant IntegerType))
-        )
-    )
-typeOf Or =
-  TypeFunction
-    (TypeTerm Nothing (TypeConstant BooleanType))
-    ( TypeTerm
-        Nothing
-        ( TypeFunction
-            (TypeTerm Nothing (TypeConstant BooleanType))
-            (TypeTerm Nothing (TypeConstant BooleanType))
-        )
-    )
-typeOf And =
-  TypeFunction
-    (TypeTerm Nothing (TypeConstant BooleanType))
-    ( TypeTerm
-        Nothing
-        ( TypeFunction
-            (TypeTerm Nothing (TypeConstant BooleanType))
-            (TypeTerm Nothing (TypeConstant BooleanType))
-        )
-    )
-typeOf Not =
-  TypeFunction
-    (TypeTerm Nothing (TypeConstant BooleanType))
-    (TypeTerm Nothing (TypeConstant BooleanType))
-
 data LambdaTerm
   = Variable String
   | Constant Const
@@ -138,3 +89,57 @@ conditional = bracketed $ do
   string "::"
   else' <- lambdaTerm
   return (Conditional cond then' else')
+
+--------------------------------------------------
+-------- Predefined type of `Const` terms --------
+--------------------------------------------------
+
+
+typeOfConst :: Const -> TypeExpr
+typeOfConst Unit = TypeConstant UnitType
+typeOfConst (Integer _) = TypeConstant IntegerType
+typeOfConst (Boolean _) = TypeConstant BooleanType
+typeOfConst Addition =
+  TypeFunction
+    (TypeTerm Nothing (TypeConstant IntegerType))
+    ( TypeTerm
+        Nothing
+        ( TypeFunction
+            (TypeTerm Nothing (TypeConstant IntegerType))
+            (TypeTerm Nothing (TypeConstant IntegerType))
+        )
+    )
+typeOfConst Multiplication =
+  TypeFunction
+    (TypeTerm Nothing (TypeConstant IntegerType))
+    ( TypeTerm
+        Nothing
+        ( TypeFunction
+            (TypeTerm Nothing (TypeConstant IntegerType))
+            (TypeTerm Nothing (TypeConstant IntegerType))
+        )
+    )
+typeOfConst Or =
+  TypeFunction
+    (TypeTerm Nothing (TypeConstant BooleanType))
+    ( TypeTerm
+        Nothing
+        ( TypeFunction
+            (TypeTerm Nothing (TypeConstant BooleanType))
+            (TypeTerm Nothing (TypeConstant BooleanType))
+        )
+    )
+typeOfConst And =
+  TypeFunction
+    (TypeTerm Nothing (TypeConstant BooleanType))
+    ( TypeTerm
+        Nothing
+        ( TypeFunction
+            (TypeTerm Nothing (TypeConstant BooleanType))
+            (TypeTerm Nothing (TypeConstant BooleanType))
+        )
+    )
+typeOfConst Not =
+  TypeFunction
+    (TypeTerm Nothing (TypeConstant BooleanType))
+    (TypeTerm Nothing (TypeConstant BooleanType))
