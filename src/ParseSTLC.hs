@@ -1,4 +1,4 @@
-module Lib
+module ParseSTLC
   ( module LambdaTerm,
     module TypeTerm,
     parseSTLC,
