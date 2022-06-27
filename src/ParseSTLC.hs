@@ -10,10 +10,10 @@ import Text.ParserCombinators.ReadP
 import TypeCheck
 import TypeTerm
 
-parseSTLC :: String -> Maybe (LambdaTerm, String)
+parseSTLC :: String -> Maybe (LambdaExpr, String)
 -- ^ Parses a given Simply Typed Lambda Calculus term
 --   as specified in the 'README.md' to the AST.
 --   Whitespace is entirely ignored.
-parseSTLC e = case readP_to_S lambdaTerm (filter (/= ' ') e) of
+parseSTLC e = case readP_to_S lambdaExpr (filter (/= ' ') e) of
   [] -> Nothing
   xs -> Just (last xs)

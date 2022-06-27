@@ -3,11 +3,12 @@
 {-# HLINT ignore "Use <$>" #-}
 
 module LambdaTerm
-  ( -- Var (..),
-    Const (..),
+  ( Const (..),
     LambdaTerm (..),
-    lambdaTerm,
+    LambdaExpr (..),
+    lambdaExpr,
     constant,
+    typeOfConst,
   )
 where
 
@@ -28,16 +29,32 @@ data Const
   | Not
   deriving (Show)
 
-data LambdaTerm
+data LambdaExpr
   = Variable String
   | Constant Const
-  | Abstraction {var' :: String, varType' :: TypeTerm, body' :: LambdaTerm}
-  | Application {func' :: LambdaTerm, arg' :: LambdaTerm}
-  | Conditional {cond' :: LambdaTerm, then' :: LambdaTerm, else' :: LambdaTerm}
+  | Abstraction {params' :: [(String, TypeTerm)], body' :: LambdaExpr}
+  | Application {func' :: LambdaExpr, args' :: [LambdaTerm]}
+  | Conditional {cond' :: LambdaExpr, then' :: LambdaExpr, else' :: LambdaExpr}
   deriving (Show)
 
+data LambdaTerm = LambdaTerm {lambdaTypeTag' :: Maybe String, lambdaExpr' :: LambdaExpr}
+  deriving (Show)
+
+lambdaExpr :: ReadP LambdaExpr
+lambdaExpr = variable <|> constant <|> abstraction <|> application <|> conditional
+
 lambdaTerm :: ReadP LambdaTerm
-lambdaTerm = variable <|> constant <|> abstraction <|> application <|> conditional
+lambdaTerm = taggedLambdaTerm <|> untaggedLambdaTerm
+
+taggedLambdaTerm :: ReadP LambdaTerm
+taggedLambdaTerm = do
+  tag <- many1 lowercase
+  char '\''
+  expr <- lambdaExpr
+  return (LambdaTerm (Just tag) expr)
+
+untaggedLambdaTerm :: ReadP LambdaTerm
+untaggedLambdaTerm = LambdaTerm Nothing <$> lambdaExpr
 
 varPlain :: ReadP String
 varPlain = many1 lowercase
@@ -48,7 +65,7 @@ varAnnotated = do
   typeTerm <- char ':' >> typeTerm
   return (name, typeTerm)
 
-variable :: ReadP LambdaTerm
+variable :: ReadP LambdaExpr
 variable = perhaps bracketed $ Variable <$> varPlain
 
 constPlain :: ReadP Const
@@ -63,37 +80,39 @@ constPlain =
     <|> (string "and" $> And)
     <|> (string "not" $> Not)
 
-constant :: ReadP LambdaTerm
+constant :: ReadP LambdaExpr
 constant = perhaps bracketed $ Constant <$> constPlain
 
-abstraction :: ReadP LambdaTerm
+argsTerm :: ReadP [(String, TypeTerm)]
+argsTerm = sepBy varAnnotated (char ',')
+
+abstraction :: ReadP LambdaExpr
 abstraction = perhaps bracketed $ do
   char '\\'
-  (varName, varType) <- varAnnotated
+  args <- argsTerm
   char '.'
-  body <- lambdaTerm
-  return (Abstraction varName varType body)
+  body <- lambdaExpr
+  return (Abstraction args body)
 
-application :: ReadP LambdaTerm
+application :: ReadP LambdaExpr
 application = bracketed $ do
-  func <- lambdaTerm
+  func <- lambdaExpr
   char '$'
-  arg <- lambdaTerm
-  return (Application func arg)
+  args <- sepBy lambdaTerm (char ',')
+  return (Application func args)
 
-conditional :: ReadP LambdaTerm
+conditional :: ReadP LambdaExpr
 conditional = bracketed $ do
-  cond <- lambdaTerm
+  cond <- lambdaExpr
   char '?'
-  then' <- lambdaTerm
+  then' <- lambdaExpr
   string "::"
-  else' <- lambdaTerm
+  else' <- lambdaExpr
   return (Conditional cond then' else')
 
 --------------------------------------------------
 -------- Predefined type of `Const` terms --------
 --------------------------------------------------
-
 
 typeOfConst :: Const -> TypeExpr
 typeOfConst Unit = TypeConstant UnitType
@@ -101,45 +120,21 @@ typeOfConst (Integer _) = TypeConstant IntegerType
 typeOfConst (Boolean _) = TypeConstant BooleanType
 typeOfConst Addition =
   TypeFunction
-    (TypeTerm Nothing (TypeConstant IntegerType))
-    ( TypeTerm
-        Nothing
-        ( TypeFunction
-            (TypeTerm Nothing (TypeConstant IntegerType))
-            (TypeTerm Nothing (TypeConstant IntegerType))
-        )
-    )
+    [TypeTerm (Just "x") (TypeConstant IntegerType), TypeTerm (Just "y") (TypeConstant IntegerType)]
+    (TypeConstant IntegerType)
 typeOfConst Multiplication =
   TypeFunction
-    (TypeTerm Nothing (TypeConstant IntegerType))
-    ( TypeTerm
-        Nothing
-        ( TypeFunction
-            (TypeTerm Nothing (TypeConstant IntegerType))
-            (TypeTerm Nothing (TypeConstant IntegerType))
-        )
-    )
+    [TypeTerm (Just "x") (TypeConstant IntegerType), TypeTerm (Just "y") (TypeConstant IntegerType)]
+    (TypeConstant IntegerType)
 typeOfConst Or =
   TypeFunction
-    (TypeTerm Nothing (TypeConstant BooleanType))
-    ( TypeTerm
-        Nothing
-        ( TypeFunction
-            (TypeTerm Nothing (TypeConstant BooleanType))
-            (TypeTerm Nothing (TypeConstant BooleanType))
-        )
-    )
+    [TypeTerm (Just "x") (TypeConstant BooleanType), TypeTerm (Just "y") (TypeConstant BooleanType)]
+    (TypeConstant BooleanType)
 typeOfConst And =
   TypeFunction
-    (TypeTerm Nothing (TypeConstant BooleanType))
-    ( TypeTerm
-        Nothing
-        ( TypeFunction
-            (TypeTerm Nothing (TypeConstant BooleanType))
-            (TypeTerm Nothing (TypeConstant BooleanType))
-        )
-    )
+    [TypeTerm (Just "x") (TypeConstant BooleanType), TypeTerm (Just "y") (TypeConstant BooleanType)]
+    (TypeConstant BooleanType)
 typeOfConst Not =
   TypeFunction
-    (TypeTerm Nothing (TypeConstant BooleanType))
-    (TypeTerm Nothing (TypeConstant BooleanType))
+    [TypeTerm (Just "x") (TypeConstant BooleanType)]
+    (TypeConstant BooleanType)

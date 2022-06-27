@@ -17,16 +17,16 @@ data BaseType
   = UnitType
   | BooleanType
   | IntegerType
-  deriving (Show)
+  deriving (Show, Eq)
 
 data TypeExpr
   = TypeVariable String
   | TypeConstant BaseType
-  | TypeFunction {from' :: TypeTerm, to' :: TypeTerm}
-  deriving (Show)
+  | TypeFunction {from' :: [TypeTerm], to' :: TypeExpr}
+  deriving (Show, Eq)
 
 data TypeTerm = TypeTerm {typeTag' :: Maybe String, typeExpr' :: TypeExpr}
-  deriving (Show)
+  deriving (Show, Eq)
 
 typeExpr :: ReadP TypeExpr
 typeExpr = typeVariable <|> typeConstant <|> functionType
@@ -52,13 +52,13 @@ typeConstant =
   perhaps bracketed $
     TypeConstant
       <$> ( (string "Unit" >> return UnitType)
-              <++ (string "Bool" >> return BooleanType)
-              <++ (string "Int" >> return IntegerType)
+              <|> (string "Bool" >> return BooleanType)
+              <|> (string "Int" >> return IntegerType)
           )
 
 functionType :: ReadP TypeExpr
 functionType = bracketed $ do
-  from <- typeTerm
+  from <- sepBy typeTerm (char ',')
   string "->"
-  to <- typeTerm
+  to <- typeExpr
   return (TypeFunction from to)

@@ -22,13 +22,20 @@ maintainer:         garbaz@t-online.de
 extra-source-files: CHANGELOG.md
 
 library
-    exposed-modules:  ParseSTLC
+  exposed-modules:  ParseSTLC
 
-    -- Modules included in this library but not exported.
-    -- other-modules:
+  -- Modules included in this library but not exported.
+  other-modules:
+    LambdaTerm
+    ParsingCommon
+    TypeCheck
+    TypeTerm
 
-    -- LANGUAGE extensions used by modules in this package.
-    -- other-extensions:
-    build-depends:    base, containers
-    hs-source-dirs:   src
-    default-language: Haskell2010
+  -- LANGUAGE extensions used by modules in this package.
+  -- other-extensions:
+  build-depends:
+    , base
+    , containers
+
+  hs-source-dirs:   src
+  default-language: Haskell2010

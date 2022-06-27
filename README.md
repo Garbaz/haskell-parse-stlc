@@ -1,20 +1,27 @@
 # STLC Parser
 
-An implementation of parsing for a Simply Type Lambda Calculus (STLC) grammar:
+An implementation of parsing for a Simply TypeTerm Lambda Calculus (STLC) grammar:
 
 ```
+
 Expr ::= Const | Variable | Abstr | Appl | Cond
 
 Const    ::= unit | true | false | <numeral> | add | mul | or | and
-Variable ::= Var | '(' Var ')'
-Abstr    ::= '\' VarAnn '.' Expr | '(' '\' VarAnn '.' Expr ')'
-Appl     ::= '(' Expr '$' Expr ')'
-Cond     ::= '(' Expr '?' Expr '::' Expr ')'
+Variable ::= Var | "(" Var ")"
+Abstr    ::= "\" Params "." Expr | "(" "\" Params "." Expr ")"
+Appl     ::= "(" Expr "$" Args ")"
+Cond     ::= "(" Expr "?" Expr "::" Expr ")"
+
+Args ::= Term | Term "," Args
+
+Term ::= Expr | TypeTag "'" Expr
+
+Params ::= VarAnn | VarAnn "," Params
 
 Var    ::= <lowercase>
-VarAnn ::= Var : Type
+VarAnn ::= Var ":" TypeTerm
 
-Type ::= TypeTag '\'' TypeExpr | TypeExpr
+TypeTerm ::= TypeExpr | TypeTag "'" TypeExpr
 
 TypeTag ::= <lowercase>
 
@@ -22,7 +29,9 @@ TypeExpr ::= TypeConst | TypeVar | TypeFunction
 
 TypeConst    ::= Unit | Bool | Int
 TypeVar      ::= <capitalized>
-TypeFunction ::= '(' Type '->' Type ')'
+TypeFunction ::= "(" TypeArgs "->" TypeTerm ")"
+
+TypeArgs ::= TypeTerm | TypeTerm "," TypeArgs
 ```
 
 (Whitespace is entirely ignored)
