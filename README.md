@@ -14,9 +14,9 @@ Cond     ::= '(' Expr '?' Expr '::' Expr ')'
 Var    ::= <lowercase>
 VarAnn ::= Var : Type
 
-Type ::= TypeTag '~' TypeExpr | TypeExpr
+Type ::= TypeTag '\'' TypeExpr | TypeExpr
 
-TypeTag ::= '\'' <lowercase>
+TypeTag ::= <lowercase>
 
 TypeExpr ::= TypeConst | TypeVar | TypeFunction
 

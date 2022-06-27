@@ -39,8 +39,8 @@ untaggedTypeTerm = TypeTerm Nothing <$> typeExpr
 
 taggedTypeTerm :: ReadP TypeTerm
 taggedTypeTerm = do
-  typeTag <- char '\'' >> Just <$> many1 lowercase
-  char '~'
+  typeTag <- Just <$> many1 lowercase
+  char '\''
   typeExpr <- typeExpr
   return (TypeTerm typeTag typeExpr)
 
