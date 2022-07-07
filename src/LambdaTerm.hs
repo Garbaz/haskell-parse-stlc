@@ -7,7 +7,6 @@ module LambdaTerm
     LambdaTerm (..),
     LambdaExpr (..),
     lambdaExpr,
-    constant,
     typeOfConst,
   )
 where
@@ -32,8 +31,8 @@ data Const
 data LambdaExpr
   = Variable String
   | Constant Const
-  | Abstraction {params' :: [(String, TypeTerm)], body' :: LambdaExpr}
-  | Application {func' :: LambdaExpr, args' :: [LambdaTerm]}
+  | Abstraction {argVar' :: String, argType :: TypeTerm, body' :: LambdaExpr}
+  | Application {func' :: LambdaExpr, arg' :: LambdaTerm}
   | Conditional {cond' :: LambdaExpr, then' :: LambdaExpr, else' :: LambdaExpr}
   deriving (Show)
 
@@ -89,17 +88,17 @@ argsTerm = sepBy varAnnotated (char ',')
 abstraction :: ReadP LambdaExpr
 abstraction = perhaps bracketed $ do
   char '\\'
-  args <- argsTerm
+  (arg, argType) <- varAnnotated
   char '.'
   body <- lambdaExpr
-  return (Abstraction args body)
+  return (Abstraction arg argType body)
 
 application :: ReadP LambdaExpr
 application = bracketed $ do
   func <- lambdaExpr
   char '$'
-  args <- sepBy lambdaTerm (char ',')
-  return (Application func args)
+  arg <- lambdaTerm
+  return (Application func arg)
 
 conditional :: ReadP LambdaExpr
 conditional = bracketed $ do
@@ -120,21 +119,33 @@ typeOfConst (Integer _) = TypeConstant IntegerType
 typeOfConst (Boolean _) = TypeConstant BooleanType
 typeOfConst Addition =
   TypeFunction
-    [TypeTerm (Just "x") (TypeConstant IntegerType), TypeTerm (Just "y") (TypeConstant IntegerType)]
-    (TypeConstant IntegerType)
+    (TypeTerm (Just "x") (TypeConstant IntegerType))
+    ( TypeFunction
+        (TypeTerm (Just "y") (TypeConstant IntegerType))
+        (TypeConstant IntegerType)
+    )
 typeOfConst Multiplication =
   TypeFunction
-    [TypeTerm (Just "x") (TypeConstant IntegerType), TypeTerm (Just "y") (TypeConstant IntegerType)]
-    (TypeConstant IntegerType)
+    (TypeTerm (Just "x") (TypeConstant IntegerType))
+    ( TypeFunction
+        (TypeTerm (Just "y") (TypeConstant IntegerType))
+        (TypeConstant IntegerType)
+    )
 typeOfConst Or =
   TypeFunction
-    [TypeTerm (Just "x") (TypeConstant BooleanType), TypeTerm (Just "y") (TypeConstant BooleanType)]
-    (TypeConstant BooleanType)
+    (TypeTerm (Just "a") (TypeConstant BooleanType))
+    ( TypeFunction
+        (TypeTerm (Just "b") (TypeConstant BooleanType))
+        (TypeConstant BooleanType)
+    )
 typeOfConst And =
   TypeFunction
-    [TypeTerm (Just "x") (TypeConstant BooleanType), TypeTerm (Just "y") (TypeConstant BooleanType)]
-    (TypeConstant BooleanType)
+    (TypeTerm (Just "a") (TypeConstant BooleanType))
+    ( TypeFunction
+        (TypeTerm (Just "b") (TypeConstant BooleanType))
+        (TypeConstant BooleanType)
+    )
 typeOfConst Not =
   TypeFunction
-    [TypeTerm (Just "x") (TypeConstant BooleanType)]
+    (TypeTerm (Just "x") (TypeConstant BooleanType))
     (TypeConstant BooleanType)

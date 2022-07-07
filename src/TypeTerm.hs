@@ -3,6 +3,7 @@
 {-# HLINT ignore "Use <$>" #-}
 module TypeTerm
   ( TypeExpr (..),
+    typeExpr,
     TypeTerm (..),
     typeTerm,
     BaseType (..),
@@ -20,16 +21,17 @@ data BaseType
   deriving (Show, Eq)
 
 data TypeExpr
-  = TypeVariable String
-  | TypeConstant BaseType
-  | TypeFunction {from' :: [TypeTerm], to' :: TypeExpr}
+  = TypeConstant BaseType
+  | -- | TypeVariable String
+    TypeFunction {from' :: TypeTerm, to' :: TypeExpr}
   deriving (Show, Eq)
 
 data TypeTerm = TypeTerm {typeTag' :: Maybe String, typeExpr' :: TypeExpr}
   deriving (Show, Eq)
 
 typeExpr :: ReadP TypeExpr
-typeExpr = typeVariable <|> typeConstant <|> functionType
+-- typeExpr = typeVariable <|> typeConstant <|> functionType
+typeExpr = typeConstant <|> functionType
 
 typeTerm :: ReadP TypeTerm
 typeTerm = untaggedTypeTerm <|> taggedTypeTerm
@@ -44,8 +46,8 @@ taggedTypeTerm = do
   typeExpr <- typeExpr
   return (TypeTerm typeTag typeExpr)
 
-typeVariable :: ReadP TypeExpr
-typeVariable = perhaps bracketed $ TypeVariable <$> capitalized
+-- typeVariable :: ReadP TypeExpr
+-- typeVariable = perhaps bracketed $ TypeVariable <$> capitalized
 
 typeConstant :: ReadP TypeExpr
 typeConstant =
@@ -58,7 +60,7 @@ typeConstant =
 
 functionType :: ReadP TypeExpr
 functionType = bracketed $ do
-  from <- sepBy typeTerm (char ',')
+  from <- typeTerm
   string "->"
   to <- typeExpr
   return (TypeFunction from to)
