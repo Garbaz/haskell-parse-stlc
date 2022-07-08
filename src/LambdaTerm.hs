@@ -104,12 +104,12 @@ abstraction = perhaps bracketed $ do
 application :: ReadP LambdaExpr
 application = bracketed $ do
   (func : args) <- sepBy1 lambdaExpr (char '$')
-  applyMultiArgs func args
+  applMultiArgs func args
   where
-    applyMultiArgs :: LambdaExpr -> [LambdaExpr] -> ReadP LambdaExpr
-    applyMultiArgs f [a] = return (Application f a)
-    applyMultiArgs f (a : as) = applyMultiArgs (Application f a) as
-    applyMultiArgs _ _ = pfail
+    applMultiArgs :: LambdaExpr -> [LambdaExpr] -> ReadP LambdaExpr
+    applMultiArgs f [a] = return (Application f a)
+    applMultiArgs f (a : as) = applMultiArgs (Application f a) as
+    applMultiArgs _ _ = pfail
 
 conditional :: ReadP LambdaExpr
 conditional = bracketed $ do

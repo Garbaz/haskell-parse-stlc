@@ -60,7 +60,10 @@ typeConstant =
 
 functionType :: ReadP TypeExpr
 functionType = bracketed $ do
-  from <- typeTerm
-  string "->"
-  to <- typeExpr
-  return (TypeFunction from to)
+  (from : tos) <- sepBy1 typeTerm (string "->")
+  funcMultiTos from tos
+  where
+    funcMultiTos :: TypeTerm -> [TypeTerm] -> ReadP TypeExpr
+    funcMultiTos f [TypeTerm _ a] = return (TypeFunction f a)
+    funcMultiTos f (a : as) = TypeFunction f <$> funcMultiTos a as
+    funcMultiTos _ _ = pfail

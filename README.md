@@ -8,11 +8,11 @@ Expr ::= Const | Variable | Abstr | Appl | Cond
 
 Const    ::= unit | true | false | <numeral> | add | mul | or | and
 Variable ::= Var | "(" Var ")"
-Abstr    ::= "\" VarAnn "." Expr | "(" "\" Params "." Expr ")"
+Abstr    ::= "\" VarAnn "." Expr | "(" "\" VarAnn "." Expr ")"
 Appl     ::= "(" Expr "$" Args ")"
 Cond     ::= "(" Expr "?" Expr "::" Expr ")"
 
-Args ::= Term "$" Args | Term
+Args ::= Term | Term "$" Args
 
 Term ::= Expr | TypeTag "=" Expr
 
@@ -27,7 +27,9 @@ TypeExpr ::= TypeConst | TypeVar | TypeFunction
 
 TypeConst    ::= Unit | Bool | Int
 TypeVar      ::= <capitalized>
-TypeFunction ::= "(" TypeTerm "->" TypeExpr ")"
+TypeFunction ::= "(" Froms "->" TypeExpr ")"
+
+Froms ::= TypeTerm | TypeTerm "->" Froms
 ```
 
 (Whitespace is entirely ignored)
