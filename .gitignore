@@ -2,3 +2,4 @@
 *~
 src/Metar.hs
 dist-newstyle
+.*.swp

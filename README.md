@@ -1,6 +1,8 @@
-# STLC Parser
+# STLC modulo Isomorphism
 
-An implementation of parsing for a Simply TypeTerm Lambda Calculus (STLC) grammar:
+An implementation of parsing / type-checking / type-inference for a Simply Typed Lambda Calculus (STLC) modulo isomorphism.
+
+## Grammar
 
 ```
 
