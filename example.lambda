@@ -1,0 +1,5 @@
+\x : Int . \y : Bool .
+   (y ?  (mul $ x $ 2)
+      :: (add $ x $ 3)
+   )
+   
