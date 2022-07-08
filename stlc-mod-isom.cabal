@@ -1,0 +1,44 @@
+cabal-version:      2.4
+name:               stlc-mod-isom
+version:            0.1.0.0
+
+-- A short (one-line) description of the package.
+-- synopsis:
+
+-- A longer description of the package.
+-- description:
+
+-- A URL where users can report bugs.
+-- bug-reports:
+
+-- The license under which the package is released.
+-- license:
+author:             garbaz
+maintainer:         garbaz@t-online.de
+
+-- A copyright notice.
+-- copyright:
+-- category:
+extra-source-files: README.md
+
+library
+  exposed-modules:  STLCmodIsom
+
+  -- Modules included in this library but not exported.
+  other-modules:
+    ParsingCommon
+    LambdaTerm
+    TypeTerm
+    TypingContext
+    TypeCheck
+    TypeCheckIsom
+    
+
+  -- LANGUAGE extensions used by modules in this package.
+  -- other-extensions:
+  build-depends:
+    , base
+    , containers
+
+  hs-source-dirs:   src
+  default-language: Haskell2010
