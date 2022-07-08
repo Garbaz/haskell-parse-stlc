@@ -4,9 +4,10 @@
 
 module LambdaTerm
   ( Const (..),
-    LambdaTerm (..),
     LambdaExpr (..),
+    LambdaTerm (..),
     lambdaExpr,
+    lambdaTerm,
     typeOfConst,
   )
 where
@@ -32,7 +33,7 @@ data LambdaExpr
   = Variable String
   | Constant Const
   | Abstraction {argVar' :: String, argType :: TypeTerm, body' :: LambdaExpr}
-  | Application {func' :: LambdaExpr, arg' :: LambdaTerm}
+  | Application {func' :: LambdaExpr, arg' :: LambdaExpr}
   | Conditional {cond' :: LambdaExpr, then' :: LambdaExpr, else' :: LambdaExpr}
   deriving (Show)
 
@@ -82,8 +83,8 @@ constPlain =
 constant :: ReadP LambdaExpr
 constant = perhaps bracketed $ Constant <$> constPlain
 
-argsTerm :: ReadP [(String, TypeTerm)]
-argsTerm = sepBy varAnnotated (char ',')
+-- argsTerm :: ReadP [(String, TypeTerm)]
+-- argsTerm = sepBy varAnnotated (char ',')
 
 abstraction :: ReadP LambdaExpr
 abstraction = perhaps bracketed $ do
@@ -93,12 +94,22 @@ abstraction = perhaps bracketed $ do
   body <- lambdaExpr
   return (Abstraction arg argType body)
 
+-- application :: ReadP LambdaExpr
+-- application = bracketed $ do
+--   func <- lambdaExpr
+--   char '$'
+--   arg <- lambdaExpr
+--   return (Application func arg)
+
 application :: ReadP LambdaExpr
 application = bracketed $ do
-  func <- lambdaExpr
-  char '$'
-  arg <- lambdaTerm
-  return (Application func arg)
+  (func : args) <- sepBy1 lambdaExpr (char '$')
+  applyMultiArgs func args
+  where
+    applyMultiArgs :: LambdaExpr -> [LambdaExpr] -> ReadP LambdaExpr
+    applyMultiArgs f [a] = return (Application f a)
+    applyMultiArgs f (a : as) = applyMultiArgs (Application f a) as
+    applyMultiArgs _ _ = pfail
 
 conditional :: ReadP LambdaExpr
 conditional = bracketed $ do

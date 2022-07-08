@@ -12,7 +12,7 @@ Abstr    ::= "\" VarAnn "." Expr | "(" "\" Params "." Expr ")"
 Appl     ::= "(" Expr "$" Args ")"
 Cond     ::= "(" Expr "?" Expr "::" Expr ")"
 
-Args ::= Term | Term
+Args ::= Term "$" Args | Term
 
 Term ::= Expr | TypeTag "=" Expr
 

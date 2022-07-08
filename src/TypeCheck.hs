@@ -1,7 +1,7 @@
 module TypeCheck
   ( typeInfer,
     typeCheck,
-    emptyContext
+    emptyContext,
   )
 where
 
@@ -21,40 +21,45 @@ lookupVar g v = head <$> Map.lookup v g
 pushVar :: TypingContext -> String -> TypeExpr -> TypingContext
 pushVar g v t = Map.insert v (t : fromMaybe [] (Map.lookup v g)) g
 
-condMaybe :: Bool -> Maybe a -> Maybe a
-condMaybe p x = if p then x else Nothing
-
-(~=) :: TypeTerm -> TypeTerm -> Bool
-(~=) (TypeTerm _ e) (TypeTerm _ e') = e == e'
+(?=>) :: Bool -> Maybe a -> Maybe a
+(?=>) p x = if p then x else Nothing
 
 typeCheck :: TypingContext -> LambdaExpr -> TypeExpr -> Bool
-typeCheck g (Variable v) t = case lookupVar g v of
-  Nothing -> False
-  Just t' -> t' == t
-typeCheck g (Constant c) t = typeOfConst c == t
-typeCheck g (Abstraction v t@(TypeTerm _ t') b) (TypeFunction fr to) = t ~= fr && typeCheck (pushVar g v t') b to
-typeCheck g (Application f (LambdaTerm _ a)) t = case typeInfer g f of
-  Just (TypeFunction (TypeTerm _ fr) to) -> to == t && typeCheck g a fr
-  _ -> False
-typeCheck g (Conditional co th el) t =
-  typeCheck g co (TypeConstant BooleanType)
-    && typeCheck g th t
-    && typeCheck g el t
+typeCheck g (Variable v) tt = case lookupVar g v of
+  Nothing -> False -- If the variable is not defined in context, we fail
+  Just t -> t == tt -- Otherwise, do the types match?
+typeCheck g (Constant c) tt = typeOfConst c == tt
+typeCheck g (Abstraction v (TypeTerm _ at) bd) (TypeFunction (TypeTerm _ fr) to) =
+  at == fr -- Are the argument types equal?
+    && typeCheck (pushVar g v at) bd to -- Does the body check against the to type?
+typeCheck g (Application fn ag) tt = case typeInfer g fn of
+  Just (TypeFunction (TypeTerm _ fr) to) -- If we infer a function type
+    | to == tt -- then does the result type match?
+        && typeCheck g ag fr -> -- And does the arg check against from?
+      True
+  _ -> False -- If we infer nothing, or the wrong type, we fail
+typeCheck g (Conditional co th el) tt =
+  typeCheck g co (TypeConstant BooleanType) -- Is the condition boolean?
+    && typeCheck g th tt -- And do the two branches
+    && typeCheck g el tt -- both have the result type?
 typeCheck _ _ _ = False
 
 typeInfer :: TypingContext -> LambdaExpr -> Maybe TypeExpr
 typeInfer g (Variable v) = lookupVar g v
 typeInfer g (Constant c) = Just (typeOfConst c)
-typeInfer g (Abstraction v t@(TypeTerm _ t') b) = do
-  t'' <- typeInfer (pushVar g v t') b
-  return (TypeFunction t t'')
-typeInfer g (Application f (LambdaTerm _ a)) = case typeInfer g f of
-  Just (TypeFunction (TypeTerm _ fr) to) | typeCheck g a fr -> Just to
-  _ -> Nothing
+typeInfer g (Abstraction v t@(TypeTerm _ at) bd) = do
+  t' <- typeInfer (pushVar g v at) bd -- Infer the type of the body, given v is in context
+  return (TypeFunction t t')
+typeInfer g (Application fn ag) = case typeInfer g fn of
+  Just (TypeFunction (TypeTerm _ fr) to) -- If we infer a function type
+    | typeCheck g ag fr -> -- does the argument type match the from?
+      Just to
+  _ -> Nothing -- If we infer nothing or the type does not match, we fail
 typeInfer g (Conditional co th el) =
-  if typeCheck g co (TypeConstant BooleanType)
-    then do
-      t <- typeInfer g th
-      t' <- typeInfer g el
-      condMaybe (t == t') (Just t)
+  if typeCheck g co (TypeConstant BooleanType) -- Is the condition boolean?
+    then case typeInfer g th of -- Try infering the type of then
+      Just t | typeCheck g el t -> Just t -- Does the else check against it?
+      _ -> case typeInfer g el of -- Otherwise, try infering the type of else
+        Just t | typeCheck g th t -> Just t -- Does the then check against it?
+        _ -> Nothing
     else Nothing

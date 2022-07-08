@@ -2,11 +2,11 @@
 
 {-# HLINT ignore "Use <$>" #-}
 module TypeTerm
-  ( TypeExpr (..),
-    typeExpr,
+  ( BaseType (..),
+    TypeExpr (..),
     TypeTerm (..),
+    typeExpr,
     typeTerm,
-    BaseType (..),
   )
 where
 
