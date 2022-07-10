@@ -5,6 +5,8 @@ module STLCmodIsom
     parseTypeExprFail,
     checkType,
     inferType,
+    checkTypeIsom,
+    inferTypeIsom,
     -- From LambdaTerm:
     Const (..),
     LambdaTerm (..),
@@ -19,8 +21,9 @@ where
 import LambdaTerm
 import Text.ParserCombinators.ReadP (readP_to_S)
 import TypeCheck
+import TypeCheckIsom
 import TypeTerm
-import TypingContext (emptyContext)
+import TypingCommon (emptyContext)
 
 cleanup :: String -> String
 cleanup = filter (`notElem` [' ', '\n', '\t'])
@@ -64,3 +67,11 @@ checkType = typeCheck emptyContext
 inferType :: LambdaExpr -> Maybe TypeExpr
 -- ^ Try to infer the type of the given STLC expression
 inferType = typeInfer emptyContext
+
+checkTypeIsom :: LambdaExpr -> TypeExpr -> Bool
+-- ^ Check that the given STLC expression has the given type modulo isomorphism
+checkTypeIsom = typeCheckIsom' emptyContext
+
+inferTypeIsom :: LambdaExpr -> Maybe TypeTerm
+-- ^ Try to infer the type of the given STLC expression modulo isomorphism
+inferTypeIsom = typeInferIsom' emptyContext

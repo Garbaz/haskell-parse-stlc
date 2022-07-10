@@ -1,0 +1,4 @@
+(
+    (\x:Int.\y:Bool.y)
+    $ false
+)

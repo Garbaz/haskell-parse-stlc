@@ -29,7 +29,7 @@ library
     ParsingCommon
     LambdaTerm
     TypeTerm
-    TypingContext
+    TypingCommon
     TypeCheck
     TypeCheckIsom
     

@@ -32,8 +32,8 @@ data Const
 data LambdaExpr
   = Variable String
   | Constant Const
-  | Abstraction {argVar' :: String, argType :: TypeTerm, body' :: LambdaExpr}
-  | Application {func' :: LambdaExpr, arg' :: LambdaExpr}
+  | Abstraction {argVar' :: String, argType :: TypeExpr, body' :: LambdaExpr}
+  | Application {func' :: LambdaExpr, arg' :: LambdaTerm}
   | Conditional {cond' :: LambdaExpr, then' :: LambdaExpr, else' :: LambdaExpr}
   deriving (Show)
 
@@ -49,7 +49,7 @@ lambdaTerm = taggedLambdaTerm <|> untaggedLambdaTerm
 taggedLambdaTerm :: ReadP LambdaTerm
 taggedLambdaTerm = do
   tag <- many1 lowercase
-  char '\''
+  char '='
   expr <- lambdaExpr
   return (LambdaTerm (Just tag) expr)
 
@@ -59,11 +59,11 @@ untaggedLambdaTerm = LambdaTerm Nothing <$> lambdaExpr
 varPlain :: ReadP String
 varPlain = many1 lowercase
 
-varAnnotated :: ReadP (String, TypeTerm)
+varAnnotated :: ReadP (String, TypeExpr)
 varAnnotated = do
   name <- varPlain
-  typeTerm <- char ':' >> typeTerm
-  return (name, typeTerm)
+  typeExpr <- char ':' >> typeExpr
+  return (name, typeExpr)
 
 variable :: ReadP LambdaExpr
 variable = perhaps bracketed $ Variable <$> varPlain
@@ -103,10 +103,10 @@ abstraction = perhaps bracketed $ do
 
 application :: ReadP LambdaExpr
 application = bracketed $ do
-  (func : args) <- sepBy1 lambdaExpr (char '$')
+  ((LambdaTerm Nothing func) : args) <- sepBy1 lambdaTerm (char '$')
   applMultiArgs func args
   where
-    applMultiArgs :: LambdaExpr -> [LambdaExpr] -> ReadP LambdaExpr
+    applMultiArgs :: LambdaExpr -> [LambdaTerm] -> ReadP LambdaExpr
     applMultiArgs f [a] = return (Application f a)
     applMultiArgs f (a : as) = applMultiArgs (Application f a) as
     applMultiArgs _ _ = pfail
