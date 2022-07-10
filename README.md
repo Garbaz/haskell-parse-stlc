@@ -19,7 +19,7 @@ Args ::= Term | Term "$" Args
 Term ::= Expr | TypeTag "=" Expr
 
 Var    ::= <lowercase>
-VarAnn ::= Var ":" TypeTerm
+VarAnn ::= Var ":" TypeExpr
 
 TypeTerm ::= TypeExpr | TypeTag "'" TypeExpr
 
