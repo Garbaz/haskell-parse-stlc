@@ -45,7 +45,7 @@ typeInferIsom g (LambdaTerm ltg (Variable v)) = do
 typeInferIsom g (LambdaTerm ltg (Constant c)) = Just (TypeTerm ltg (typeOfConst c))
 typeInferIsom g (LambdaTerm ltg (Abstraction v vte bd)) = do
   (TypeTerm _ t) <- typeInferIsom' (pushVar g v vtt) bd -- Infer type of body, given argument
-  Just (TypeTerm ltg (TypeFunction vtt t)) 
+  Just (TypeTerm ltg (TypeFunction vtt t))
   where
     vtt = TypeTerm (Just v) vte -- An argument variable's name becomes it's type's tag
 typeInferIsom g (LambdaTerm ltg (Application fn ag)) = do
@@ -62,21 +62,6 @@ typeInferIsom g (LambdaTerm ltg (Conditional co th el)) =
 
 typeInferIsom' :: TypingContext TypeTerm -> LambdaExpr -> Maybe TypeTerm
 typeInferIsom' g le = typeInferIsom g (LambdaTerm Nothing le)
-
-(<<=) :: Eq a => Maybe a -> Maybe a -> Bool
--- ^ Either the left term should be nothing,
---   or the terms should be equal.
-(<<=) x y = isNothing x || x == y
-
-(<:) :: TypeExpr -> TypeExpr -> Bool
--- ^ Could left be used in a place expecting right?
-(<:) (TypeConstant bt) (TypeConstant bt') = bt == bt'
-(<:) (TypeFunction tt te) (TypeFunction tt' te') = (tt <<: tt') && te == te'
-(<:) _ _ = False
-
-(<<:) :: TypeTerm -> TypeTerm -> Bool
--- ^ Could left be used in a place expecting right?
-(<<:) (TypeTerm tg te) (TypeTerm tg' te') = tg <<= tg' && te <: te'
 
 applyNamedArg :: TypingContext TypeTerm -> TypeExpr -> LambdaTerm -> Maybe TypeExpr
 -- ^ Descend into a given function type and try to find
