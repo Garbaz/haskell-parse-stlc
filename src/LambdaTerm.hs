@@ -24,6 +24,7 @@ data Const
   | Boolean Bool
   | Addition
   | Multiplication
+  | LessThan
   | Or
   | And
   | Not
@@ -79,6 +80,7 @@ constPlain =
     <|> (string "or" $> Or)
     <|> (string "and" $> And)
     <|> (string "not" $> Not)
+    <|> (string "lt" $> LessThan)
 
 constant :: ReadP LambdaExpr
 constant = perhaps bracketed $ Constant <$> constPlain
@@ -141,6 +143,13 @@ typeOfConst Multiplication =
     ( TypeFunction
         (TypeTerm (Just "y") (TypeConstant IntegerType))
         (TypeConstant IntegerType)
+    )
+typeOfConst LessThan =
+  TypeFunction
+    (TypeTerm (Just "l") (TypeConstant IntegerType))
+    ( TypeFunction
+        (TypeTerm (Just "r") (TypeConstant IntegerType))
+        (TypeConstant BooleanType)
     )
 typeOfConst Or =
   TypeFunction

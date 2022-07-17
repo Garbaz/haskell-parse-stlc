@@ -1,0 +1,8 @@
+(
+    \f:(k'Int -> Int -> Int) .
+        f
+$
+    \ a:Int .
+    \ k:Int . 
+        k
+)

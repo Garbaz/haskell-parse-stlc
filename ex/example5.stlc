@@ -1,0 +1,2 @@
+\a:Int . \y:Int .
+    ((lt $ l=y $ a) ? a :: a)

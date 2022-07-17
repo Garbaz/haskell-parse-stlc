@@ -22,8 +22,7 @@ data BaseType
 
 data TypeExpr
   = TypeConstant BaseType
-  | -- | TypeVariable String
-    TypeFunction {from' :: TypeTerm, to' :: TypeExpr}
+  | TypeFunction {from' :: TypeTerm, to' :: TypeExpr}
   deriving (Show, Eq)
 
 data TypeTerm = TypeTerm {typeTag' :: Maybe String, typeExpr' :: TypeExpr}

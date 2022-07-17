@@ -42,7 +42,7 @@ parseSTLCFail :: String -> LambdaExpr
 parseSTLCFail e = case parseSTLC e of
   Nothing -> error "Failed to parse expression!"
   Just (l, "") -> l
-  Just (_, r) -> error ("Expression wasn't fully parsed! Remainder: " ++ r)
+  Just (_, r) -> error ("Expression wasn't fully parsed! Remainder: `" ++ r ++ "`")
 
 parseTypeExpr :: String -> Maybe (TypeExpr, String)
 -- ^ Parses a given TypeExpr term
@@ -58,7 +58,7 @@ parseTypeExprFail :: String -> TypeExpr
 parseTypeExprFail t = case parseTypeExpr t of
   Nothing -> error "Failed to parse expression!"
   Just (l, "") -> l
-  Just (_, r) -> error ("Expression wasn't fully parsed! Remainder: " ++ r)
+  Just (_, r) -> error ("Expression wasn't fully parsed! Remainder: `" ++ r ++ "`")
 
 checkType :: LambdaExpr -> TypeExpr -> Bool
 -- ^ Check that the given STLC expression has the given type

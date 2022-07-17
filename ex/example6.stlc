@@ -1,0 +1,8 @@
+(\ f : (x'Int -> y'Int -> Int) .
+\ x : Int .
+(
+    f $ y = x
+)
+$ x = 1
+$ x = 2
+)

@@ -4,7 +4,7 @@ An implementation of parsing / type-checking / type-inference for a Simply Typed
 
 ## Grammar
 
-```
+```ebnf
 
 Expr ::= Const | Variable | Abstr | Appl | Cond
 

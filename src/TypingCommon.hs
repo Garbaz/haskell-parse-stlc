@@ -27,12 +27,12 @@ pushVar :: TypingContext a -> String -> a -> TypingContext a
 pushVar g v t = Map.insert v (t : fromMaybe [] (Map.lookup v g)) g
 
 (?>>) :: Bool -> Maybe a -> Maybe a
--- ^ If the condition is true, pass through
+-- ^ If the condition is true, return right
 --   otherwise return nothing
 (?>>) p x = if p then x else Nothing
 
 (||=) :: Maybe a -> Maybe a -> Maybe a
--- ^ Return left unless Nothing, then return right
+-- ^ Return left if Some, otherwise return right
 (||=) Nothing d = d
 (||=) x _ = x
 
