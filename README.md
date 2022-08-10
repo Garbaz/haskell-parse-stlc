@@ -8,7 +8,7 @@ An implementation of parsing / type-checking / type-inference for a Simply Typed
 
 Expr ::= Const | Variable | Abstr | Appl | Cond
 
-Const    ::= unit | true | false | <numeral> | add | mul | or | and
+Const    ::= unit | true | false | <numeral> | add | mul | lt | or | and
 Variable ::= Var | "(" Var ")"
 Abstr    ::= "\" VarAnn "." Expr | "(" "\" VarAnn "." Expr ")"
 Appl     ::= "(" Expr "$" Args ")"
