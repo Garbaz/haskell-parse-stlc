@@ -28,7 +28,18 @@ data Const
   | Or
   | And
   | Not
-  deriving (Show)
+
+instance Show Const where
+  show Unit = "unit"
+  show (Integer i) = show i
+  show (Boolean True) = "true"
+  show (Boolean False) = "false"
+  show Addition  = "add"
+  show Multiplication = "mul"
+  show LessThan = "lt"
+  show Or = "or"
+  show And = "and"
+  show Not = "not"
 
 data LambdaExpr
   = Variable String
@@ -36,10 +47,19 @@ data LambdaExpr
   | Abstraction {argVar' :: String, argType :: TypeExpr, body' :: LambdaExpr}
   | Application {func' :: LambdaExpr, arg' :: LambdaTerm}
   | Conditional {cond' :: LambdaExpr, then' :: LambdaExpr, else' :: LambdaExpr}
-  deriving (Show)
+
+instance Show LambdaExpr where
+  show (Variable v) = v
+  show (Constant c) = show c
+  show (Abstraction v t b) = "(\\" ++ v ++ " : " ++ show t ++ " . " ++ show b ++ ")"
+  show (Application f a)     = "(" ++ show f ++ " $ " ++ show a ++ ")"
+  show (Conditional c t e)   = "(" ++ show c ++ "?" ++ show t ++ "::" ++ show e ++ ")"
 
 data LambdaTerm = LambdaTerm {lambdaTypeTag' :: Maybe String, lambdaExpr' :: LambdaExpr}
-  deriving (Show)
+
+instance Show LambdaTerm where
+  show (LambdaTerm Nothing e) = show e
+  show (LambdaTerm (Just t) e) = t ++ "=" ++ show e
 
 lambdaExpr :: ReadP LambdaExpr
 lambdaExpr = variable <|> constant <|> abstraction <|> application <|> conditional
@@ -51,8 +71,7 @@ taggedLambdaTerm :: ReadP LambdaTerm
 taggedLambdaTerm = do
   tag <- many1 lowercase
   char '='
-  expr <- lambdaExpr
-  return (LambdaTerm (Just tag) expr)
+  LambdaTerm (Just tag) <$> lambdaExpr
 
 untaggedLambdaTerm :: ReadP LambdaTerm
 untaggedLambdaTerm = LambdaTerm Nothing <$> lambdaExpr
@@ -71,16 +90,16 @@ variable = perhaps bracketed $ Variable <$> varPlain
 
 constPlain :: ReadP Const
 constPlain =
-  (string "unit" $> Unit)
-    <|> (string "true" $> Boolean True)
-    <|> (string "false" $> Boolean False)
+  string "unit" $> Unit
+    <|> string "true" $> Boolean True
+    <|> string "false" $> Boolean False
     <|> (numeral <&> Integer)
-    <|> (string "add" $> Addition)
-    <|> (string "mul" $> Multiplication)
-    <|> (string "or" $> Or)
-    <|> (string "and" $> And)
-    <|> (string "not" $> Not)
-    <|> (string "lt" $> LessThan)
+    <|> string "add" $> Addition
+    <|> string "mul" $> Multiplication
+    <|> string "or" $> Or
+    <|> string "and" $> And
+    <|> string "not" $> Not
+    <|> string "lt" $> LessThan
 
 constant :: ReadP LambdaExpr
 constant = perhaps bracketed $ Constant <$> constPlain
@@ -93,8 +112,7 @@ abstraction = perhaps bracketed $ do
   char '\\'
   (arg, argType) <- varAnnotated
   char '.'
-  body <- lambdaExpr
-  return (Abstraction arg argType body)
+  Abstraction arg argType <$> lambdaExpr
 
 -- application :: ReadP LambdaExpr
 -- application = bracketed $ do
@@ -119,8 +137,7 @@ conditional = bracketed $ do
   char '?'
   then' <- lambdaExpr
   string "::"
-  else' <- lambdaExpr
-  return (Conditional cond then' else')
+  Conditional cond then' <$> lambdaExpr
 
 --------------------------------------------------
 -------- Predefined type of `Const` terms --------

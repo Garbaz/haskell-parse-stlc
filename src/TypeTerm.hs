@@ -18,15 +18,28 @@ data BaseType
   = UnitType
   | BooleanType
   | IntegerType
-  deriving (Show, Eq)
+  deriving (Eq)
+
+instance Show BaseType where
+  show UnitType = "Unit"
+  show BooleanType = "Bool"
+  show IntegerType = "Int"
 
 data TypeExpr
   = TypeConstant BaseType
   | TypeFunction {from' :: TypeTerm, to' :: TypeExpr}
-  deriving (Show, Eq)
+  deriving (Eq)
+
+instance Show TypeExpr where
+  show (TypeConstant b) = show b
+  show (TypeFunction f t) = "(" ++ show f ++ "->" ++ show t ++ ")"
 
 data TypeTerm = TypeTerm {typeTag' :: Maybe String, typeExpr' :: TypeExpr}
-  deriving (Show, Eq)
+  deriving (Eq)
+
+instance Show TypeTerm where
+  show (TypeTerm Nothing e) = show e
+  show (TypeTerm (Just t) e) = t ++ "'" ++ show e
 
 typeExpr :: ReadP TypeExpr
 -- typeExpr = typeVariable <|> typeConstant <|> functionType
