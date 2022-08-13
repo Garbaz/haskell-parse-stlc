@@ -14,6 +14,7 @@ where
 
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe, isNothing)
+import Debug.Trace (traceShow)
 import TypeTerm
 
 type TypingContext a = Map.Map String [a]
@@ -55,3 +56,8 @@ pushVar g v t = Map.insert v (t : fromMaybe [] (Map.lookup v g)) g
 (<<:) :: TypeTerm -> TypeTerm -> Bool
 -- ^ Could left be used in a place expecting right?
 (<<:) (TypeTerm tg te) (TypeTerm tg' te') = tg <<= tg' && te <: te'
+
+(///) :: Show a => b -> a -> b
+(///) x y = if debugEnabled then traceShow y x else x
+  where
+    debugEnabled = True

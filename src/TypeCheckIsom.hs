@@ -1,6 +1,7 @@
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 {-# HLINT ignore "Use record patterns" #-}
+
 module TypeCheckIsom
   ( typeCheckIsom,
     typeInferIsom,
@@ -11,16 +12,9 @@ where
 
 import Data.List (find)
 import Data.Maybe (fromMaybe, isNothing)
-import Debug.Trace
 import LambdaTerm
-import TypeCheck
 import TypeTerm
 import TypingCommon
-
-(///) :: Show a => b -> a -> b
-(///) x y = if debugEnabled then traceShow y x else x
-  where
-    debugEnabled = True
 
 typeCheckIsom :: TypingContext TypeExpr -> LambdaTerm -> TypeTerm -> Bool
 typeCheckIsom g lt@(LambdaTerm ltg _) tt@(TypeTerm ttg _) = ltg <<= ttg && tci g lt tt

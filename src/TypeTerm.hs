@@ -5,12 +5,15 @@ module TypeTerm
   ( BaseType (..),
     TypeExpr (..),
     TypeTerm (..),
+    -- TypePoly (..),
     typeExpr,
     typeTerm,
+    -- typePoly,
   )
 where
 
 import Control.Applicative ((<|>))
+import Data.List (intercalate)
 import ParsingCommon
 import Text.ParserCombinators.ReadP
 
@@ -18,21 +21,31 @@ data BaseType
   = UnitType
   | BooleanType
   | IntegerType
+  | TypeType   -- Special type for type variables in the context
   deriving (Eq)
 
 instance Show BaseType where
   show UnitType = "Unit"
   show BooleanType = "Bool"
   show IntegerType = "Int"
+  show TypeType = "Type"
 
 data TypeExpr
   = TypeConstant BaseType
+  | TypeVariable String
   | TypeFunction {from' :: TypeTerm, to' :: TypeExpr}
   deriving (Eq)
 
 instance Show TypeExpr where
   show (TypeConstant b) = show b
+  show (TypeVariable v) = v
   show (TypeFunction f t) = "(" ++ show f ++ "->" ++ show t ++ ")"
+
+-- data TypePoly = TypePoly {polyVars' :: [String], typeTerm' :: TypeExpr}
+--   deriving (Eq)
+
+-- instance Show TypePoly where
+--   show (TypePoly vs t) = "(" ++ intercalate "," vs ++ "=>" ++ show t ++ ")"
 
 data TypeTerm = TypeTerm {typeTag' :: Maybe String, typeExpr' :: TypeExpr}
   deriving (Eq)
@@ -41,9 +54,20 @@ instance Show TypeTerm where
   show (TypeTerm Nothing e) = show e
   show (TypeTerm (Just t) e) = t ++ "'" ++ show e
 
-typeExpr :: ReadP TypeExpr
--- typeExpr = typeVariable <|> typeConstant <|> functionType
-typeExpr = typeConstant <|> functionType
+-- typePoly :: ReadP TypePoly
+-- typePoly = perhaps bracketed (polyTypePoly <|> nonpolyTypePoly)
+
+-- polyTypePoly :: ReadP TypePoly
+-- polyTypePoly = do
+--   polyVars <- sepBy (many1 lowercase) (char ',')
+--   string "=>"
+--   typeExpr <- typeExpr
+--   return (TypePoly polyVars typeExpr)
+
+-- nonpolyTypePoly :: ReadP TypePoly
+-- nonpolyTypePoly = do
+--   typeExpr <- typeExpr
+--   return (TypePoly [] typeExpr)
 
 typeTerm :: ReadP TypeTerm
 typeTerm = untaggedTypeTerm <|> taggedTypeTerm
@@ -58,8 +82,8 @@ taggedTypeTerm = do
   typeExpr <- typeExpr
   return (TypeTerm typeTag typeExpr)
 
--- typeVariable :: ReadP TypeExpr
--- typeVariable = perhaps bracketed $ TypeVariable <$> capitalized
+typeExpr :: ReadP TypeExpr
+typeExpr = typeConstant <|> typeVariable <|> functionType
 
 typeConstant :: ReadP TypeExpr
 typeConstant =
@@ -69,6 +93,9 @@ typeConstant =
               <|> (string "Bool" >> return BooleanType)
               <|> (string "Int" >> return IntegerType)
           )
+
+typeVariable :: ReadP TypeExpr
+typeVariable = perhaps bracketed $ TypeVariable <$> many1 lowercase
 
 functionType :: ReadP TypeExpr
 functionType = bracketed $ do

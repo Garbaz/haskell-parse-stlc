@@ -28,18 +28,20 @@ data Const
   | Or
   | And
   | Not
+  | Id
 
 instance Show Const where
   show Unit = "unit"
   show (Integer i) = show i
   show (Boolean True) = "true"
   show (Boolean False) = "false"
-  show Addition  = "add"
+  show Addition = "add"
   show Multiplication = "mul"
   show LessThan = "lt"
   show Or = "or"
   show And = "and"
   show Not = "not"
+  show Id = "id"
 
 data LambdaExpr
   = Variable String
@@ -52,8 +54,8 @@ instance Show LambdaExpr where
   show (Variable v) = v
   show (Constant c) = show c
   show (Abstraction v t b) = "(\\" ++ v ++ " : " ++ show t ++ " . " ++ show b ++ ")"
-  show (Application f a)     = "(" ++ show f ++ " $ " ++ show a ++ ")"
-  show (Conditional c t e)   = "(" ++ show c ++ "?" ++ show t ++ "::" ++ show e ++ ")"
+  show (Application f a) = "(" ++ show f ++ " $ " ++ show a ++ ")"
+  show (Conditional c t e) = "(" ++ show c ++ "?" ++ show t ++ "::" ++ show e ++ ")"
 
 data LambdaTerm = LambdaTerm {lambdaTypeTag' :: Maybe String, lambdaExpr' :: LambdaExpr}
 
@@ -61,8 +63,13 @@ instance Show LambdaTerm where
   show (LambdaTerm Nothing e) = show e
   show (LambdaTerm (Just t) e) = t ++ "=" ++ show e
 
-lambdaExpr :: ReadP LambdaExpr
-lambdaExpr = variable <|> constant <|> abstraction <|> application <|> conditional
+-- data PolyLambda = PolyLambda {polyVars' :: [String], lambdaTerm' :: LambdaTerm}
+
+-- instance Show PolyLambda where
+--   show (PolyLambda _ t) = show t
+
+-- polyLambda :: ReadP PolyLambda
+-- polyLambda = undefined
 
 lambdaTerm :: ReadP LambdaTerm
 lambdaTerm = taggedLambdaTerm <|> untaggedLambdaTerm
@@ -75,6 +82,9 @@ taggedLambdaTerm = do
 
 untaggedLambdaTerm :: ReadP LambdaTerm
 untaggedLambdaTerm = LambdaTerm Nothing <$> lambdaExpr
+
+lambdaExpr :: ReadP LambdaExpr
+lambdaExpr = variable <|> constant <|> abstraction <|> application <|> conditional
 
 varPlain :: ReadP String
 varPlain = many1 lowercase
@@ -163,26 +173,30 @@ typeOfConst Multiplication =
     )
 typeOfConst LessThan =
   TypeFunction
-    (TypeTerm (Just "l") (TypeConstant IntegerType))
+    (TypeTerm (Just "x") (TypeConstant IntegerType))
     ( TypeFunction
-        (TypeTerm (Just "r") (TypeConstant IntegerType))
+        (TypeTerm (Just "y") (TypeConstant IntegerType))
         (TypeConstant BooleanType)
     )
 typeOfConst Or =
   TypeFunction
-    (TypeTerm (Just "a") (TypeConstant BooleanType))
+    (TypeTerm (Just "x") (TypeConstant BooleanType))
     ( TypeFunction
-        (TypeTerm (Just "b") (TypeConstant BooleanType))
+        (TypeTerm (Just "y") (TypeConstant BooleanType))
         (TypeConstant BooleanType)
     )
 typeOfConst And =
   TypeFunction
-    (TypeTerm (Just "a") (TypeConstant BooleanType))
+    (TypeTerm (Just "x") (TypeConstant BooleanType))
     ( TypeFunction
-        (TypeTerm (Just "b") (TypeConstant BooleanType))
+        (TypeTerm (Just "y") (TypeConstant BooleanType))
         (TypeConstant BooleanType)
     )
 typeOfConst Not =
   TypeFunction
     (TypeTerm (Just "x") (TypeConstant BooleanType))
     (TypeConstant BooleanType)
+typeOfConst Id =
+  TypeFunction
+    (TypeTerm (Just "x") (TypeVariable "a"))
+    (TypeVariable "a")
