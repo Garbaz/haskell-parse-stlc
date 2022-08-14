@@ -7,17 +7,36 @@ module TypingCommon
     (||=),
     (>>=?),
     (<<=),
-    (<:),
-    (<<:),
+    Error,
+    failure,
+    success
   )
 where
 
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe, isNothing)
-import Debug.Trace (traceShow)
+import LambdaTerm
 import TypeTerm
 
 type TypingContext a = Map.Map String [a]
+
+type Error a = Either String a
+
+failure :: String -> Error a
+failure = Left
+
+success :: a -> Error a
+success = Right
+
+-- instance Functor Error where
+--   fmap _ (Failure s) = Failure s
+--   fmap fab (Success a) = Success (fab a)
+
+-- instance Applicative Error where
+--   pure = Success
+  -- _ <*> (Failure s) = Failure s
+  -- (Failure s) <*> (Success _) = Failure s
+  -- (Success fab) <*> (Success a) = Success (fab a)
 
 emptyContext = Map.empty
 
@@ -27,37 +46,22 @@ lookupVar g v = head <$> Map.lookup v g
 pushVar :: TypingContext a -> String -> a -> TypingContext a
 pushVar g v t = Map.insert v (t : fromMaybe [] (Map.lookup v g)) g
 
-(?>>) :: Bool -> Maybe a -> Maybe a
--- ^ If the condition is true, return right
+-- | If the condition is true, return right
 --   otherwise return nothing
+(?>>) :: Bool -> Maybe a -> Maybe a
 (?>>) p x = if p then x else Nothing
 
+-- | Return left if Just, otherwise return right
 (||=) :: Maybe a -> Maybe a -> Maybe a
--- ^ Return left if Some, otherwise return right
 (||=) Nothing d = d
 (||=) x _ = x
 
+-- | If given Nothing, return False; If given Just, apply function
 (>>=?) :: Maybe a -> (a -> Bool) -> Bool
--- ^ If given Nothing, return False; If given Just, apply function
 (>>=?) Nothing _ = False
 (>>=?) (Just x) f = f x
 
-(<<=) :: Eq a => Maybe a -> Maybe a -> Bool
--- ^ Either the left term should be nothing,
+-- | Either the left term should be nothing,
 --   or the terms should be equal.
+(<<=) :: Eq a => Maybe a -> Maybe a -> Bool
 (<<=) x y = isNothing x || x == y
-
-(<:) :: TypeExpr -> TypeExpr -> Bool
--- ^ Could left be used in a place expecting right?
-(<:) (TypeConstant bt) (TypeConstant bt') = bt == bt'
-(<:) (TypeFunction tt te) (TypeFunction tt' te') = (tt <<: tt') && te == te'
-(<:) _ _ = False
-
-(<<:) :: TypeTerm -> TypeTerm -> Bool
--- ^ Could left be used in a place expecting right?
-(<<:) (TypeTerm tg te) (TypeTerm tg' te') = tg <<= tg' && te <: te'
-
-(///) :: Show a => b -> a -> b
-(///) x y = if debugEnabled then traceShow y x else x
-  where
-    debugEnabled = True

@@ -21,14 +21,14 @@ data BaseType
   = UnitType
   | BooleanType
   | IntegerType
-  | TypeType   -- Special type for type variables in the context
   deriving (Eq)
+-- | TypeType -- Special type for type variables in the context
 
 instance Show BaseType where
   show UnitType = "Unit"
   show BooleanType = "Bool"
   show IntegerType = "Int"
-  show TypeType = "Type"
+  -- show TypeType = "Type"
 
 data TypeExpr
   = TypeConstant BaseType

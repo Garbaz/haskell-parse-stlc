@@ -29,6 +29,7 @@ data Const
   | And
   | Not
   | Id
+  | Cond
 
 instance Show Const where
   show Unit = "unit"
@@ -42,20 +43,22 @@ instance Show Const where
   show And = "and"
   show Not = "not"
   show Id = "id"
+  show Cond = "cond"
 
 data LambdaExpr
   = Variable String
   | Constant Const
   | Abstraction {argVar' :: String, argType :: TypeExpr, body' :: LambdaExpr}
   | Application {func' :: LambdaExpr, arg' :: LambdaTerm}
-  | Conditional {cond' :: LambdaExpr, then' :: LambdaExpr, else' :: LambdaExpr}
 
+-- | Conditional {cond' :: LambdaExpr, then' :: LambdaExpr, else' :: LambdaExpr}
 instance Show LambdaExpr where
   show (Variable v) = v
   show (Constant c) = show c
   show (Abstraction v t b) = "(\\" ++ v ++ " : " ++ show t ++ " . " ++ show b ++ ")"
   show (Application f a) = "(" ++ show f ++ " $ " ++ show a ++ ")"
-  show (Conditional c t e) = "(" ++ show c ++ "?" ++ show t ++ "::" ++ show e ++ ")"
+
+-- show (Conditional c t e) = "(" ++ show c ++ "?" ++ show t ++ "::" ++ show e ++ ")"
 
 data LambdaTerm = LambdaTerm {lambdaTypeTag' :: Maybe String, lambdaExpr' :: LambdaExpr}
 
@@ -84,7 +87,7 @@ untaggedLambdaTerm :: ReadP LambdaTerm
 untaggedLambdaTerm = LambdaTerm Nothing <$> lambdaExpr
 
 lambdaExpr :: ReadP LambdaExpr
-lambdaExpr = variable <|> constant <|> abstraction <|> application <|> conditional
+lambdaExpr = variable <|> constant <|> abstraction <|> application -- <|> conditional
 
 varPlain :: ReadP String
 varPlain = many1 lowercase
@@ -110,6 +113,7 @@ constPlain =
     <|> string "and" $> And
     <|> string "not" $> Not
     <|> string "lt" $> LessThan
+    <|> string "cond" $> Cond
 
 constant :: ReadP LambdaExpr
 constant = perhaps bracketed $ Constant <$> constPlain
@@ -141,13 +145,13 @@ application = bracketed $ do
     applMultiArgs f (a : as) = applMultiArgs (Application f a) as
     applMultiArgs _ _ = pfail
 
-conditional :: ReadP LambdaExpr
-conditional = bracketed $ do
-  cond <- lambdaExpr
-  char '?'
-  then' <- lambdaExpr
-  string "::"
-  Conditional cond then' <$> lambdaExpr
+-- conditional :: ReadP LambdaExpr
+-- conditional = bracketed $ do
+--   cond <- lambdaExpr
+--   char '?'
+--   then' <- lambdaExpr
+--   string "::"
+--   Conditional cond then' <$> lambdaExpr
 
 --------------------------------------------------
 -------- Predefined type of `Const` terms --------
@@ -200,3 +204,13 @@ typeOfConst Id =
   TypeFunction
     (TypeTerm (Just "x") (TypeVariable "a"))
     (TypeVariable "a")
+typeOfConst Cond =
+  TypeFunction
+    (TypeTerm (Just "i") (TypeConstant BooleanType))
+    ( TypeFunction
+        (TypeTerm (Just "t") (TypeVariable "a"))
+        ( TypeFunction
+            (TypeTerm (Just "e") (TypeVariable "a"))
+            (TypeVariable "a")
+        )
+    )
