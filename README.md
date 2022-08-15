@@ -6,13 +6,13 @@ An implementation of parsing / type-checking / type-inference for a Simply Typed
 
 ```ebnf
 
-Expr ::= Const | Variable | Abstr | Appl | Cond
+Expr ::= Const | Variable | Abstr | Appl | Let
 
-Const    ::= unit | true | false | <numeral> | add | mul | lt | or | and
+Const    ::= unit | true | false | <numeral> | add | mul | lt | or | and | not | id | cond
 Variable ::= Var | "(" Var ")"
 Abstr    ::= "\" VarAnn "." Expr | "(" "\" VarAnn "." Expr ")"
 Appl     ::= "(" Expr "$" Args ")"
-Cond     ::= "(" Expr "?" Expr "::" Expr ")"
+Let      ::= "[" Var ":=" Expr "]" Expr
 
 Args ::= Term | Term "$" Args
 

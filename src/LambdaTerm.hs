@@ -50,6 +50,7 @@ data LambdaExpr
   | Constant Const
   | Abstraction {argVar' :: String, argType :: TypeExpr, body' :: LambdaExpr}
   | Application {func' :: LambdaExpr, arg' :: LambdaTerm}
+  | Let {letVar' :: String, letExpr' :: LambdaExpr, letBody' :: LambdaExpr}
 
 -- | Conditional {cond' :: LambdaExpr, then' :: LambdaExpr, else' :: LambdaExpr}
 instance Show LambdaExpr where
@@ -57,6 +58,7 @@ instance Show LambdaExpr where
   show (Constant c) = show c
   show (Abstraction v t b) = "(\\" ++ v ++ " : " ++ show t ++ " . " ++ show b ++ ")"
   show (Application f a) = "(" ++ show f ++ " $ " ++ show a ++ ")"
+  show (Let v e b) = "[" ++ v ++ " := " ++ show e ++ "]" ++ show b
 
 -- show (Conditional c t e) = "(" ++ show c ++ "?" ++ show t ++ "::" ++ show e ++ ")"
 
@@ -81,13 +83,14 @@ taggedLambdaTerm :: ReadP LambdaTerm
 taggedLambdaTerm = do
   tag <- many1 lowercase
   char '='
-  LambdaTerm (Just tag) <$> lambdaExpr
+  lambdaExpr <- lambdaExpr
+  return (LambdaTerm (Just tag) lambdaExpr)
 
 untaggedLambdaTerm :: ReadP LambdaTerm
 untaggedLambdaTerm = LambdaTerm Nothing <$> lambdaExpr
 
 lambdaExpr :: ReadP LambdaExpr
-lambdaExpr = variable <|> constant <|> abstraction <|> application -- <|> conditional
+lambdaExpr = variable <|> constant <|> abstraction <|> let' <|> application
 
 varPlain :: ReadP String
 varPlain = many1 lowercase
@@ -109,11 +112,12 @@ constPlain =
     <|> (numeral <&> Integer)
     <|> string "add" $> Addition
     <|> string "mul" $> Multiplication
+    <|> string "lt" $> LessThan
     <|> string "or" $> Or
     <|> string "and" $> And
     <|> string "not" $> Not
-    <|> string "lt" $> LessThan
     <|> string "cond" $> Cond
+    <|> string "id" $> Id
 
 constant :: ReadP LambdaExpr
 constant = perhaps bracketed $ Constant <$> constPlain
@@ -126,7 +130,18 @@ abstraction = perhaps bracketed $ do
   char '\\'
   (arg, argType) <- varAnnotated
   char '.'
-  Abstraction arg argType <$> lambdaExpr
+  body <- lambdaExpr
+  return (Abstraction arg argType body)
+
+let' :: ReadP LambdaExpr
+let' = do
+  char '['
+  letVar <- varPlain
+  string ":="
+  letExpr <- lambdaExpr
+  char ']'
+  letBody <- lambdaExpr
+  return (Let letVar letExpr letBody)
 
 -- application :: ReadP LambdaExpr
 -- application = bracketed $ do
@@ -206,11 +221,11 @@ typeOfConst Id =
     (TypeVariable "a")
 typeOfConst Cond =
   TypeFunction
-    (TypeTerm (Just "i") (TypeConstant BooleanType))
+    (TypeTerm (Just "if") (TypeConstant BooleanType))
     ( TypeFunction
-        (TypeTerm (Just "t") (TypeVariable "a"))
+        (TypeTerm (Just "then") (TypeVariable "a"))
         ( TypeFunction
-            (TypeTerm (Just "e") (TypeVariable "a"))
+            (TypeTerm (Just "else") (TypeVariable "a"))
             (TypeVariable "a")
         )
     )

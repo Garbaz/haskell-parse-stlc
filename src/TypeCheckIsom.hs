@@ -18,28 +18,30 @@ import TypeTerm
 import TypingCommon
 
 -- | Could the first expression be used in a place expecting the second expression?
---   Returns the resulting context of type variables.
-subTypePoly :: TypeExpr -> TypeExpr -> Error (TypingContext TypeExpr)
+--   Returns the resulting specialization of type variables in the second expression.
+subTypePoly :: TypeExpr -> TypeExpr -> Result (TypingContext TypeExpr)
 subTypePoly = _subTypePoly emptyContext
 
-_subTypePoly :: TypingContext TypeExpr -> TypeExpr -> TypeExpr -> Error (TypingContext TypeExpr)
+_subTypePoly :: TypingContext TypeExpr -> TypeExpr -> TypeExpr -> Result (TypingContext TypeExpr)
 _subTypePoly d (TypeConstant bt) (TypeConstant bt') =
-  if bt == bt'
+  if bt == bt' -- Base types can only be subtypes of themselves
     then success d
-    else failure ("The type `" ++ show bt ++ "` is not a subtype of `" ++ show bt' ++ "`.")
-_subTypePoly d (TypeFunction tt te) (TypeFunction tt' te') = _subTypePoly' d tt tt' >>= \d -> _subTypePoly d te te'
+    else failure ("The base types `" ++ show bt ++ "` and `" ++ show bt' ++ "` are incompatible.")
+_subTypePoly d (TypeFunction fr to) (TypeFunction fr' to') =
+  _subTypePoly' d fr fr' -- the from types has to be subtypes
+    >>= \d -> _subTypePoly d to to' -- and the to types have to be be subtypes
 _subTypePoly d te (TypeVariable tv) = case lookupVar d tv of
-  Just te' -> _subTypePoly d te te'
-  Nothing -> success (pushVar d tv te)
-_subTypePoly d (TypeVariable tv) te = success (pushVar d tv te)
-_subTypePoly _ _ _ = undefined
+  Just te' -> _subTypePoly d te te' -- If the type variable has already been specialized, check for subtype
+  Nothing -> success (pushVar d tv te) -- otherwise, specialize the type variable
+_subTypePoly d (TypeVariable tv) te = failure ("The type variable `" ++ tv ++ "` is not a general subtype of the type expression `" ++ show te ++ "`.")
+_subTypePoly _ te te' = failure ("The type expression `" ++ show te ++ "` is not a subtype of the type expression `" ++ show te' ++ "`.")
 
 -- | Could the first term be used in a place expecting the second term?
 --   Returns the resulting context of type variables.
-subTypePoly' :: TypeTerm -> TypeTerm -> Error (TypingContext TypeExpr)
+subTypePoly' :: TypeTerm -> TypeTerm -> Result (TypingContext TypeExpr)
 subTypePoly' = _subTypePoly' emptyContext
 
-_subTypePoly' :: TypingContext TypeExpr -> TypeTerm -> TypeTerm -> Error (TypingContext TypeExpr)
+_subTypePoly' :: TypingContext TypeExpr -> TypeTerm -> TypeTerm -> Result (TypingContext TypeExpr)
 _subTypePoly' d (TypeTerm tg te) (TypeTerm tg' te') =
   if tg <<= tg'
     then _subTypePoly d te te'
@@ -47,19 +49,14 @@ _subTypePoly' d (TypeTerm tg te) (TypeTerm tg' te') =
 
 -- | Could left be used in a place expecting right?
 --   Returns the specialized type expression.
-(<:) :: TypeExpr -> TypeExpr -> Error TypeExpr
--- (<:) (TypeConstant bt) (TypeConstant bt') = bt == bt'
--- (<:) (TypeFunction tt te) (TypeFunction tt' te') = (tt <<: tt') && (te <: te')
--- (<:) _ _ = False
--- (<:) te te' = isJust (subTypePoly emptyContext te te')
+(<:) :: TypeExpr -> TypeExpr -> Result TypeExpr
 (<:) te te' = do
   d <- subTypePoly te te'
   success (substTypeVars d te')
 
 -- | Could left be used in a place expecting right?
 --   Returns the specialized type term.
-(<<:) :: TypeTerm -> TypeTerm -> Error TypeTerm
--- (<<:) (TypeTerm tg te) (TypeTerm tg' te') = tg <<= tg' && te <: te'
+(<<:) :: TypeTerm -> TypeTerm -> Result TypeTerm
 (<<:) tt tt'@(TypeTerm tg te) =
   do
     d <- subTypePoly' tt tt'
@@ -77,12 +74,12 @@ substTypeVars d (TypeFunction (TypeTerm tt te) te') = TypeFunction (TypeTerm tt 
   where
     debugEnabled = True
 
-typeCheckIsom :: TypingContext TypeExpr -> LambdaTerm -> TypeTerm -> Error TypeTerm
+typeCheckIsom :: TypingContext TypeExpr -> LambdaTerm -> TypeTerm -> Result TypeTerm
 typeCheckIsom g lt@(LambdaTerm ltg _) tt@(TypeTerm ttg _) = do
   te <- tci g lt tt
   success (TypeTerm (ltg ||= ttg) te)
   where
-    tci :: TypingContext TypeExpr -> LambdaTerm -> TypeTerm -> Error TypeExpr
+    tci :: TypingContext TypeExpr -> LambdaTerm -> TypeTerm -> Result TypeExpr
     tci g lt@(LambdaTerm ltg (Variable v)) tt@(TypeTerm tg te) = case lookupVar g v of -- Look for variable type in emptyContext
       Just te' -> te' <: te -- Do the types fit?
       Nothing -> failure ("Could not find variable `" ++ v ++ "` in the context `" ++ show g ++ "`.")
@@ -94,73 +91,75 @@ typeCheckIsom g lt@(LambdaTerm ltg _) tt@(TypeTerm ttg _) = do
     tci g lt@(LambdaTerm _ (Application fn ag)) (TypeTerm _ te) = do
       (TypeTerm ftg ft) <- typeInferIsom' g fn -- Infer type of function
       ag <- applyArg g ft ag -- And try to apply argument to it
-      ag <: te -- If it succeds, make sure the resulting type fits
+      ag <: te -- If it succeds, make sure the resulting types fit
     tci _ lt tt = failure ("The lambda term `" ++ show lt ++ "` does not fit the type term `" ++ show tt ++ "`.")
 
-typeCheckIsom' :: TypingContext TypeExpr -> LambdaExpr -> TypeExpr -> Error TypeTerm
+typeCheckIsom' :: TypingContext TypeExpr -> LambdaExpr -> TypeExpr -> Result TypeTerm
 typeCheckIsom' g le te = typeCheckIsom g (LambdaTerm Nothing le) (TypeTerm Nothing te)
 
-typeInferIsom :: TypingContext TypeExpr -> LambdaTerm -> Error TypeTerm
-typeInferIsom g (LambdaTerm ltg (Variable v)) = case lookupVar g v of
-  Just lute -> success (TypeTerm ltg lute)
-  Nothing -> failure ("Could not find variable `" ++ v ++ "` in the context `" ++ show g ++ "`.")
-typeInferIsom g (LambdaTerm ltg (Constant c)) = success (TypeTerm ltg (typeOfConst c))
-typeInferIsom g (LambdaTerm ltg (Abstraction v vte bd)) = do
-  (TypeTerm _ te) <- typeInferIsom' (pushVar g v vte) bd -- Infer type of body, given argument
-  success (TypeTerm ltg (TypeFunction vtt te))
+typeInferIsom :: TypingContext TypeExpr -> LambdaTerm -> Result TypeTerm
+typeInferIsom g (LambdaTerm ltg le) = TypeTerm ltg <$> tii g le
   where
-    vtt = TypeTerm (Just v) vte -- An argument variable's name becomes it's type's tag
-typeInferIsom g (LambdaTerm ltg (Application fn ag)) = do
-  (TypeTerm _ te) <- typeInferIsom' g fn -- Infer type of function
-  to <- applyArg g te ag -- Try to apply the function to the argument
-  success (TypeTerm ltg to)
+    tii :: TypingContext TypeExpr -> LambdaExpr -> Result TypeExpr
+    tii g (Variable v) = case lookupVar g v of
+      Just lute -> success lute
+      Nothing -> failure ("Could not find variable `" ++ v ++ "` in the context `" ++ show g ++ "`.")
+    tii g (Constant c) = success (typeOfConst c)
+    tii g (Abstraction v vte bd) = do
+      (TypeTerm _ te) <- typeInferIsom' (pushVar g v vte) bd -- Infer type of body, given argument
+      success (TypeFunction vtt te)
+      where
+        vtt = TypeTerm (Just v) vte -- An argument variable's name becomes it's type's tag
+    tii g (Application fn ag) = do
+      (TypeTerm _ te) <- typeInferIsom' g fn -- Infer type of function
+      applyArg g te ag -- Try to apply the function to the argument
+    tii g (Let lv le lb) = do
+      (TypeTerm _ te) <- typeInferIsom' g le
+      (TypeTerm _ te') <- typeInferIsom' (pushVar g lv te) lb
+      success te'
 
--- typeInferIsom g (LambdaTerm ltg (Conditional co th el)) =
---   isJust (typeCheckIsom' g co (TypeConstant BooleanType)) -- Is the condition boolean?
---     ?>> case typeInferIsom' g th of -- Try infering the type of then-case
---       Just t | typeCheckIsom' g el (typeExpr' t) -> Just t -- Does else-case check against it?
---       _ -> case typeInferIsom' g el of -- Otherwise, try infering the type of else-case
---         Just t | typeCheckIsom' g th (typeExpr' t) -> Just t -- Does then-case check against it?
---         _ -> Nothing
-
-typeInferIsom' :: TypingContext TypeExpr -> LambdaExpr -> Error TypeTerm
+typeInferIsom' :: TypingContext TypeExpr -> LambdaExpr -> Result TypeTerm
 typeInferIsom' g le = typeInferIsom g (LambdaTerm Nothing le)
 
 -- | Descend into a given function type and try to find
 --   an argument that fits the given lambda term.
 --   Return the reduced function expression if successful.
-applyArg :: TypingContext TypeExpr -> TypeExpr -> LambdaTerm -> Error TypeExpr
-applyArg g (TypeFunction fr to) ag = case typeInferIsom g ag of
-  Right tt -> do
-    d <- subTypePoly' tt fr
-    success (substTypeVars d to)
-  Left _ -> TypeFunction fr <$> applyArg g to ag
---   (TypeTerm tt (TypeVariable tv)) -> substTypeVars (pushVar emptyContext tv a)
---   _ -> Just to -- Does the argument type fit the from type?
+applyArg :: TypingContext TypeExpr -> TypeExpr -> LambdaTerm -> Result TypeExpr
+applyArg g te ag = do
+  case aa g te ag of
+    Right (r, d) -> success (substTypeVars d r)
+    Left s -> failure s
+  where
+    -- Left s -> case aa g te (LambdaTerm Nothing (lambdaExpr' ag)) of
+    --   Right (r, d) -> success (substTypeVars d r)
+    --   Left s' -> failure (s ++ "\n" ++ s')
 
-applyArg _ te lt =
-  failure
-    ( "Could not find an argument that fits the lambda term `"
-        ++ show lt
-        ++ "` in the type expression `"
-        ++ show te
-        ++ "`."
-    )
+    aa :: TypingContext TypeExpr -> TypeExpr -> LambdaTerm -> Result (TypeExpr, TypingContext TypeExpr)
+    aa g (TypeFunction fr@(TypeTerm frtg frte) to) ag = case do
+      (TypeTerm ttg te) <- typeInferIsom g ag -- Find type of argument
+      case ttg of
+        Just _ ->
+          -- If the argument has a tag
+          if ttg <<= frtg -- make sure that it fits the tag of the from
+            then subTypePoly te frte -- and check that the expression fits
+            else failure ("The tag of the argument `" ++ show ag ++ "` does not fit the tag of the from `" ++ show fr ++ "`")
+        Nothing -> subTypePoly te frte of -- otherwise, just check that the expression fits
+      Right d -> success (to, d) /// ("Found " ++ show fr ++ " for " ++ show ag)
+      Left s -> case aa g to ag of
+        Right (r, d) -> success (TypeFunction fr r, d)
+        Left s' -> failure (s ++ "\n" ++ s')
+    aa _ te lt = failure ("Could not find an argument that fits the lambda term `" ++ show lt ++ "`.")
 
 -- | Descend into a given abstraction and find an argument variable
 --   that fits the given TypeTerm. If successful,
 --   returns the reduced abstraction and the cut out variable.
-findArgVar :: LambdaExpr -> TypeTerm -> Error (LambdaExpr, (String, TypeExpr))
+findArgVar :: LambdaExpr -> TypeTerm -> Result (LambdaExpr, (String, TypeExpr))
 findArgVar (Abstraction v vte bd) fr = case subTypePoly' fr (TypeTerm (Just v) vte) of
   Right d -> success (bd, (v, substTypeVars d vte))
-  Left _ -> do
-    (bd', va') <- findArgVar bd fr
-    success (Abstraction v vte bd', va')
-findArgVar le tt =
-  failure
-    ( "Could not find an argument variable that fits the type term `" ++ show tt ++ "` in the lambda expression `" ++ show le
-        ++ "`."
-    )
+  Left s -> case findArgVar bd fr of
+    Right (bd', va') -> success (Abstraction v vte bd', va')
+    Left s' -> failure (s ++ s')
+findArgVar le tt = failure ("Could not find an argument variable that fits the type term `" ++ show tt ++ "`.")
 
 -- | Flatten a given function type into a list of it's froms
 --   and it's to.

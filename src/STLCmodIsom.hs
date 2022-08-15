@@ -7,6 +7,7 @@ module STLCmodIsom
     -- inferType,
     checkTypeIsom,
     inferTypeIsom,
+    -- repl,
     -- From LambdaTerm:
     Const (..),
     LambdaTerm (..),
@@ -18,12 +19,14 @@ module STLCmodIsom
   )
 where
 
+import Control.Exception (try)
 import LambdaTerm
+import System.Console.Repl
 import Text.ParserCombinators.ReadP (readP_to_S)
 import TypeCheck
 import TypeCheckIsom
 import TypeTerm
-import TypingCommon (Error, emptyContext)
+import TypingCommon (Result, emptyContext)
 
 cleanup :: String -> String
 cleanup = filter (`notElem` [' ', '\n', '\t'])
@@ -69,9 +72,24 @@ inferType :: LambdaExpr -> Maybe TypeExpr
 inferType = typeInfer emptyContext
 
 -- | Check that the given STLC expression has the given type modulo isomorphism
-checkTypeIsom :: LambdaExpr -> TypeExpr -> Error TypeTerm
+checkTypeIsom :: LambdaExpr -> TypeExpr -> Result TypeTerm
 checkTypeIsom = typeCheckIsom' emptyContext
 
 -- | Try to infer the type of the given STLC expression modulo isomorphism
-inferTypeIsom :: LambdaExpr -> Error TypeTerm
+inferTypeIsom :: LambdaExpr -> Result TypeTerm
 inferTypeIsom = typeInferIsom' emptyContext
+
+replInferIsom :: IO ()
+replInferIsom =
+  repl
+    "|- "
+    ( \l -> case parseSTLC l of
+        Just (e, "") -> print (inferTypeIsom e)
+        _ -> print "Failed to parse input."
+    )
+
+-- repl :: (Read a, Show b) => (a -> b) -> IO ()
+-- repl f = do
+--   i <- readLn
+--   print (f i)
+--   repl f

@@ -7,9 +7,9 @@ module TypingCommon
     (||=),
     (>>=?),
     (<<=),
-    Error,
+    Result,
     failure,
-    success
+    success,
   )
 where
 
@@ -20,23 +20,13 @@ import TypeTerm
 
 type TypingContext a = Map.Map String [a]
 
-type Error a = Either String a
+type Result a = Either String a
 
-failure :: String -> Error a
+failure :: String -> Result a
 failure = Left
 
-success :: a -> Error a
+success :: a -> Result a
 success = Right
-
--- instance Functor Error where
---   fmap _ (Failure s) = Failure s
---   fmap fab (Success a) = Success (fab a)
-
--- instance Applicative Error where
---   pure = Success
-  -- _ <*> (Failure s) = Failure s
-  -- (Failure s) <*> (Success _) = Failure s
-  -- (Success fab) <*> (Success a) = Success (fab a)
 
 emptyContext = Map.empty
 
