@@ -1,2 +1,2 @@
-[eval := \f:(a -> b).\x:a.(f $ x)]
-(eval $ x = 0 $ f = id)
+[t := \f:(k'a -> b -> a).\x:a.\y:b.(f $ k = x $ y)]
+(t $ f = \k:b.\z:Bool.(k))

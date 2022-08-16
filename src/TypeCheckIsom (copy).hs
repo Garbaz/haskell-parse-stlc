@@ -12,6 +12,7 @@ where
 
 import Data.List (find)
 import Data.Maybe (fromMaybe, isJust, isNothing)
+import Debug.Trace (traceShow)
 import LambdaTerm
 import TypeTerm
 import TypingCommon
@@ -46,58 +47,53 @@ import TypingCommon
 --     then _subTypePoly d te te'
 --     else failure ("The tag `" ++ show tg ++ "` is not a subtag of `" ++ show tg' ++ "`.")
 
--- | Check that Left could be used in a place expecting Right.
---   Return resulting typing context and specialization.
-subTypePoly :: TypeExpr -> TypeExpr -> Result (TypingContext TypeExpr)
-subTypePoly = stp emptyContext
+-- | Check that Right could be used in a place expecting Left.
+--   Return resulting typing context and Left specialized to types of Right.
+subTypePoly :: TypeExpr -> TypeExpr -> Result (TypingContext TypeExpr, TypeExpr)
+subTypePoly l r = lomp' emptyContext l r
   where
-    stp :: TypingContext TypeExpr -> TypeExpr -> TypeExpr -> Result (TypingContext TypeExpr)
-    stp d l@(TypeConstant bt) r@(TypeConstant bt') =
-      if bt == bt'
-        then success d
-        else failure ("The type constants `" ++ show l ++ "` and `" ++ show r ++ "` are not equal.")
-    stp d l (TypeVariable v) = case lookupVar d v of
-      Just te' -> stp d l te' -- If the type variable has already been specialized, check for subtype
-      Nothing -> success (pushVar d v l) -- otherwise, specialize the type variable
-    stp d (TypeFunction fr to) (TypeFunction fr' to') = do
-      d <- stp' d fr fr'
-      d <- stp d to to'
-      success d
-    stp _ l r = failure ("The type expression `" ++ show l ++ "` can not be used in a place expecting `" ++ show r ++ "`.")
-
-    stp' :: TypingContext TypeExpr -> TypeTerm -> TypeTerm -> Result (TypingContext TypeExpr)
-    stp' d (TypeTerm ttg te) (TypeTerm ttg' te') =
-      if ttg' <<= ttg
-        then stp d te te'
+    lomp :: TypingContext TypeExpr -> TypeTerm -> TypeTerm -> Result (TypingContext TypeExpr, TypeTerm)
+    lomp d (TypeTerm ttg te) (TypeTerm ttg' te') =
+      if ttg <<= ttg'
+        then do
+          (d, sp) <- lomp' d te te'
+          success (d, TypeTerm ttg sp)
         else failure ("The type tag `" ++ show ttg ++ "` is bigger than the type tag `" ++ show ttg' ++ "`.")
+    lomp' :: TypingContext TypeExpr -> TypeExpr -> TypeExpr -> Result (TypingContext TypeExpr, TypeExpr)
+    lomp' d l@(TypeConstant bt) r@(TypeConstant bt') =
+      if bt == bt'
+        then success (d, r)
+        else failure ("The type constants `" ++ show l ++ "` and `" ++ show r ++ "` are not equal.")
+    lomp' d (TypeVariable v) r = success (pushVar d v r, r)
+    lomp' d (TypeFunction fr to) (TypeFunction fr' to') = do
+      (d, x) <- lomp d fr fr'
+      (d, y) <- lomp' d to to'
+      success (d, TypeFunction x y)
+    lomp' _ l r = failure ("The type expression `" ++ show r ++ "can not be used in a place expecting `" ++ show l ++ "`.")
 
 substTypeVars :: TypingContext TypeExpr -> TypeExpr -> TypeExpr
 substTypeVars d te@(TypeVariable v) = fromMaybe te (lookupVar d v)
-substTypeVars d te@(TypeFunction (TypeTerm ttg frte) to) = TypeFunction (TypeTerm ttg (substTypeVars d frte)) (substTypeVars d to)
+substTypeVars d te@(TypeFunction (TypeTerm ttg frte) to) = TypeFunction (TypeTerm ttg (substTypeVars d frte)) (substTypeVars d frte)
 substTypeVars d te = te
 
 -- | Try to find an argument in Left that fits the type term Right.
---   Return reduced and specialized Left
-applyArg :: TypeExpr -> TypeTerm -> Result TypeExpr
-applyArg fn ag = do
-  (d, te) <- aa fn ag
+--   Return specialized right
+findArgVar :: TypeExpr -> TypeTerm -> Result TypeExpr
+findArgVar l r = do
+  (d, te) <- fav l r
   success (substTypeVars d te)
   where
-    aa :: TypeExpr -> TypeTerm -> Result (TypingContext TypeExpr, TypeExpr)
-    aa (TypeFunction fr@(TypeTerm ttg te) to) ag@(TypeTerm ttg' te') =
+    fav :: TypeExpr -> TypeTerm -> Result (TypingContext TypeExpr, TypeExpr)
+    fav (TypeFunction fr@(TypeTerm ttg te) to) ag@(TypeTerm ttg' te') =
       if ttg' <<= ttg -- Type tag of the argument has to be less than the type tag of the variable
-        then case subTypePoly te' te of -- Check that the type itself fits
-          Right d -> success (d, to) -- Return the remaining function and the specialized argument
-          f@(Left _) ->
-            descend |++ failure ("The type tag of `" ++ show fr ++ "` suits the type tag of `" ++ show ag ++ "`, but their types do not.") |++ f
-        else descend |++ failure ("The type tag of the variable `" ++ show fr ++ "` is smaller than the type tag of the argument `" ++ show ag ++ "`.")
-      where
-        descend = do
-          (d, te) <- aa to ag
-          success (d, TypeFunction fr te)
-    aa fn ag = failure ("Could not find an argument that fits `" ++ show ag ++ "`")
+        then case subTypePoly te te' of -- Check that the type itself
+          Right sp -> success sp -- Return the remaining function and the specialized argument
+          Left _ ->
+            fav to ag |++ failure ("The type tag of `" ++ show fr ++ "` suits the type tag of `" ++ show ag ++ "`, but their types do not.")
+        else fav to ag |++ failure ("The type tag of the variable `" ++ show fr ++ "` is smaller than the type tag of the argument `" ++ show ag ++ "`.")
+    fav l r = failure ("Could not find an argument that fits `" ++ show r ++ "`")
 
--- | Could Left be used in a place expecting Right?
+-- | Could left be used in a place expecting right?
 --   Returns the specialized type expression.
 (<:) :: TypeExpr -> TypeExpr -> Result TypeExpr
 (<:) te te' = do
@@ -119,17 +115,25 @@ applyArg fn ag = do
 -- substTypeVars d te@(TypeConstant _) = te
 -- substTypeVars d (TypeFunction (TypeTerm tt te) te') = TypeFunction (TypeTerm tt (substTypeVars d te)) (substTypeVars d te')
 
+(///) :: Show a => b -> a -> b
+(///) x y = if debugEnabled then traceShow y x else x
+  where
+    debugEnabled = True
+
 typeCheckIsom :: TypingContext TypeExpr -> LambdaExpr -> TypeExpr -> Result TypeExpr
 typeCheckIsom g (Variable v) te = case lookupVar g v of -- Look for variable type in emptyContext
   Just te' -> te' <: te -- Do the types fit?
   Nothing -> failure ("Could not find variable `" ++ v ++ "` in the context `" ++ show g ++ "`.")
 typeCheckIsom g (Constant c) te = typeOfConst c <: te
-typeCheckIsom g le@(Abstraction _ _ _) te@(TypeFunction _ _) = typeInferIsom g le >>= (<: te)
-typeCheckIsom g (Application fn ag) te = do
-  fnt <- typeInferIsom g fn -- Infer type of function
-  agt <- typeInferIsom' g ag -- Infer type of argument
-  rx <- applyArg fnt agt -- Apply & reduce
-  rx <: te -- If it succeds, make sure the resulting types fit
+typeCheckIsom g le@(Abstraction _ _ _) (TypeFunction fr to) = do
+  lete <- typeInferIsom g le
+  lete' <- findArgVar lete fr -- Find argument variable in abstraction that fits the function's from
+  subTypePoly lete' to -- Does the reduced lambda expression fit the to?
+  
+typeCheckIsom g lt@(LambdaTerm _ (Application fn ag)) (TypeTerm _ te) = do
+  (TypeTerm ftg ft) <- typeInferIsom' g fn -- Infer type of function
+  ag <- applyArg g ft ag -- And try to apply argument to it
+  ag <: te -- If it succeds, make sure the resulting types fit
 typeCheckIsom _ lt tt = failure ("The lambda term `" ++ show lt ++ "` does not fit the type term `" ++ show tt ++ "`.")
 
 typeCheckIsom' :: TypingContext TypeExpr -> LambdaTerm -> TypeTerm -> Result TypeTerm
@@ -147,9 +151,8 @@ typeInferIsom g (Abstraction v vte bd) = do
   te <- typeInferIsom (pushVar g v vte) bd -- Infer type of body, given argument
   success (TypeFunction (TypeTerm (Just v) vte) te) -- An argument variable's name becomes it's type's tag
 typeInferIsom g (Application fn ag) = do
-  fnt <- typeInferIsom g fn -- Infer type of function
-  agt <- typeInferIsom' g ag
-  applyArg fnt agt -- Try to apply the function to the argument
+  te <- typeInferIsom g fn -- Infer type of function
+  applyArg g te ag -- Try to apply the function to the argument
 typeInferIsom g (Let lv le lb) = do
   te <- typeInferIsom g le
   te' <- typeInferIsom (pushVar g lv te) lb
@@ -201,30 +204,30 @@ typeInferIsom' g (LambdaTerm ltg le) = TypeTerm ltg <$> typeInferIsom g le
 --     Left s' -> failure (s ++ s')
 -- findArgVar le tt = failure ("Could not find an argument variable that fits the type term `" ++ show tt ++ "`.")
 
--- -- | Flatten a given function type into a list of it's froms
--- --   and it's to.
--- flattenTypeFunction :: TypeExpr -> ([TypeTerm], TypeExpr)
--- flattenTypeFunction te = (init ftd, typeExpr' (last ftd))
---   where
---     ftd = reverse (ft te)
---     ft :: TypeExpr -> [TypeTerm]
---     ft (TypeFunction fr to) = fr : ft to
---     ft te = [TypeTerm Nothing te]
+-- | Flatten a given function type into a list of it's froms
+--   and it's to.
+flattenTypeFunction :: TypeExpr -> ([TypeTerm], TypeExpr)
+flattenTypeFunction te = (init ftd, typeExpr' (last ftd))
+  where
+    ftd = reverse (ft te)
+    ft :: TypeExpr -> [TypeTerm]
+    ft (TypeFunction fr to) = fr : ft to
+    ft te = [TypeTerm Nothing te]
 
--- -- | Flatten a given abstraction expression into a list of it's argument variables
--- --   and it's body.
--- flattenAbstraction :: LambdaExpr -> ([(String, TypeExpr)], LambdaExpr)
--- flattenAbstraction (Abstraction v vte bd) = ((v, vte) : vas, bd)
---   where
---     (vas, bd) = flattenAbstraction bd
--- flattenAbstraction le = ([], le)
+-- | Flatten a given abstraction expression into a list of it's argument variables
+--   and it's body.
+flattenAbstraction :: LambdaExpr -> ([(String, TypeExpr)], LambdaExpr)
+flattenAbstraction (Abstraction v vte bd) = ((v, vte) : vas, bd)
+  where
+    (vas, bd) = flattenAbstraction bd
+flattenAbstraction le = ([], le)
 
--- -- | Flatten a given application expression into the function
--- --    and a list of all it's arguments.
--- flattenApplication :: LambdaExpr -> (LambdaExpr, [LambdaTerm])
--- flattenApplication le = (lambdaExpr' (head fld), tail fld)
---   where
---     fld = reverse (fl le)
---     fl :: LambdaExpr -> [LambdaTerm]
---     fl (Application fn ag) = ag : fl fn
---     fl le = [LambdaTerm Nothing le]
+-- | Flatten a given application expression into the function
+--    and a list of all it's arguments.
+flattenApplication :: LambdaExpr -> (LambdaExpr, [LambdaTerm])
+flattenApplication le = (lambdaExpr' (head fld), tail fld)
+  where
+    fld = reverse (fl le)
+    fl :: LambdaExpr -> [LambdaTerm]
+    fl (Application fn ag) = ag : fl fn
+    fl le = [LambdaTerm Nothing le]

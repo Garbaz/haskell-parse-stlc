@@ -10,6 +10,8 @@ module TypingCommon
     Result,
     failure,
     success,
+    (|++),
+    (///),
   )
 where
 
@@ -17,16 +19,28 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe, isNothing)
 import LambdaTerm
 import TypeTerm
+import Debug.Trace (traceShow)
+
+(///) :: Show a => b -> a -> b
+(///) x y = if debugEnabled then traceShow y x else x
+  where
+    debugEnabled = True
 
 type TypingContext a = Map.Map String [a]
 
 type Result a = Either String a
 
 failure :: String -> Result a
-failure = Left
+failure s = Left s /// s
 
 success :: a -> Result a
 success = Right
+
+-- | If Left and Right are failure, prepend Right to Left.
+--   Otherwise, return Left.
+(|++) :: Result a -> Result b -> Result a
+(|++) (Left s) (Left s') = Left (s' ++ "\n" ++ s)
+(|++) l _ = l
 
 emptyContext = Map.empty
 

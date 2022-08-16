@@ -72,12 +72,12 @@ inferType :: LambdaExpr -> Maybe TypeExpr
 inferType = typeInfer emptyContext
 
 -- | Check that the given STLC expression has the given type modulo isomorphism
-checkTypeIsom :: LambdaExpr -> TypeExpr -> Result TypeTerm
-checkTypeIsom = typeCheckIsom' emptyContext
+checkTypeIsom :: LambdaExpr -> TypeExpr -> Result TypeExpr
+checkTypeIsom = typeCheckIsom emptyContext
 
 -- | Try to infer the type of the given STLC expression modulo isomorphism
-inferTypeIsom :: LambdaExpr -> Result TypeTerm
-inferTypeIsom = typeInferIsom' emptyContext
+inferTypeIsom :: LambdaExpr -> Result TypeExpr
+inferTypeIsom = typeInferIsom emptyContext
 
 replInferIsom :: IO ()
 replInferIsom =
