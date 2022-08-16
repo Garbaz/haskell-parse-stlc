@@ -31,7 +31,7 @@ type TypingContext a = Map.Map String [a]
 type Result a = Either String a
 
 failure :: String -> Result a
-failure s = Left s /// s
+failure = Left
 
 success :: a -> Result a
 success = Right
