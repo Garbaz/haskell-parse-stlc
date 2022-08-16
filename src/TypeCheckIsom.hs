@@ -56,8 +56,15 @@ subTypePoly = stp emptyContext
       if bt == bt'
         then success d
         else failure ("The type constants `" ++ show l ++ "` and `" ++ show r ++ "` are not equal.")
+    stp d l@(TypeVariable vl) (TypeVariable v) = case lookupVar d v of
+      Just te'@(TypeVariable v') ->
+        if v == v'
+          then success d
+          else failure ("Type variable `" ++ v ++ "` has been set to the type variable  `" ++ v' ++ "` which is not equal to the type variable `" ++ vl ++ "`")
+      Just te' -> failure ("Type variable `" ++ v ++ "` has been set to `" ++ show te' ++ "` which is not a type variable `" ++ vl ++ "`")
+      Nothing -> success (pushVar d v l)
     stp d l (TypeVariable v) = case lookupVar d v of
-      Just te' -> stp d l te' -- If the type variable has already been specialized, check for subtype
+      Just te' -> stp d l te' /// show te' -- If the type variable has already been specialized, check for subtype
       Nothing -> success (pushVar d v l) -- otherwise, specialize the type variable
     stp d (TypeFunction fr to) (TypeFunction fr' to') = do
       d <- stp' d fr fr'

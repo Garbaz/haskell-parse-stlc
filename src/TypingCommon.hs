@@ -31,10 +31,10 @@ type TypingContext a = Map.Map String [a]
 type Result a = Either String a
 
 failure :: String -> Result a
-failure = Left
+failure = Left -- /// s
 
-success :: a -> Result a
-success = Right
+success :: Show a => a -> Result a
+success = Right -- /// show x
 
 -- | If Left and Right are failure, prepend Right to Left.
 --   Otherwise, return Left.

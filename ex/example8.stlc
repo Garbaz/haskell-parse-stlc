@@ -1,2 +1,2 @@
 [t := \f:(k'a -> b -> a).\x:a.\y:b.(f $ k = x $ y)]
-(t $ f = \k:b.\z:Bool.(k))
+(t $ f = \k:a.\z:Bool.(k))
