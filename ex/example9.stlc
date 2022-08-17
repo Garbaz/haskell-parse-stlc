@@ -1,0 +1,3 @@
+\\f:(a -> a).
+    \\g:(Int -> Bool -> Int).
+        (g $ (f $ 0) $ (f $ false))
