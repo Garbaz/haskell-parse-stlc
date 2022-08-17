@@ -38,9 +38,10 @@ TypeVar      ::= <lowercase>
 TypeFunction ::= "(" Froms "->" TypeExpr ")"
 
 Froms ::= TypeTerm | TypeTerm "->" Froms
+
+(Whitespace is entirely ignored in all terms)
 ```
 
-(Whitespace is entirely ignored)
 
 
 ## To-dos / open questions
@@ -59,3 +60,4 @@ _Idea 3_ : Use De Bruijn indexing.
 
 - Implement Hindley–Milner & relax type annotation requirements
 - Write a more flexible parser
+- Switch to using explicit multi-argument functions, since it doesn't really make sense for arguments to have a hierarchy if we treat them as mostly unordered. Question: Do we still descend into any sub-functions in search for arguments, i.e. do we allow something like `((\x:Int,y:Int. \z:Int. x) $ z=0)`?
