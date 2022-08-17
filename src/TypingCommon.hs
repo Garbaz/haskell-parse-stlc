@@ -44,9 +44,11 @@ success = Right -- /// show x
 
 emptyContext = Map.empty
 
+-- | Find the currently assigned value of the variable
 lookupVar :: TypingContext a -> String -> Maybe a
 lookupVar g v = head <$> Map.lookup v g
 
+-- | Assign the given value to the variable, shadowing any prior assigned value
 pushVar :: TypingContext a -> String -> a -> TypingContext a
 pushVar g v t = Map.insert v (t : fromMaybe [] (Map.lookup v g)) g
 
