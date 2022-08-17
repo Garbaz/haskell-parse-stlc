@@ -16,10 +16,12 @@ import TypeTerm
 import TypingCommon
 
 -- | Check that Left could be used in a place expecting Right.
---   Return resulting typing context and specialization.
+--   Return resulting typing context.
 subTypePoly :: TypeExpr -> TypeExpr -> Result (TypingContext TypeExpr)
 subTypePoly = _stp emptyContext
 
+-- | Check that Left could be used in a place expecting Right.
+--   Return resulting typing context.
 subTypePoly' :: TypeTerm -> TypeTerm -> Result (TypingContext TypeExpr)
 subTypePoly' = _stp' emptyContext
 
