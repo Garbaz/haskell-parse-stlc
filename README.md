@@ -1,6 +1,6 @@
 # Polymorphic STLC modulo isomorphism
 
-An implementation of parsing / type-checking / type-inference for a polymorphic Simply Typed Lambda Calculus (STLC) modulo isomorphism. All abstraction arguments have to be annotated.
+An implementation of parsing / type-checking / type-inference for a polymorphic Simply Typed Lambda Calculus (STLC) modulo isomorphism.
 
 _polymorphic_ here is meant specifically in the sense of System F. Due to type annotations being mandatory, type inference is decidable and straightforward.
 
