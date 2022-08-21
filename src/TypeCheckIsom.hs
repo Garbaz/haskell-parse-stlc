@@ -10,6 +10,7 @@ module TypeCheckIsom
   )
 where
 
+import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
 import LambdaTerm
 import TypeTerm
@@ -30,15 +31,15 @@ _stp d l@(TypeConstant bt) r@(TypeConstant bt') =
   if bt == bt' -- Base types have to be equal to be subtypes
     then success d
     else failure ("The type constants `" ++ show l ++ "` and `" ++ show r ++ "` are not equal.")
-_stp d l@(TypeVariable vl) (TypeVariable v) = case lookupVar d v of
+_stp d (TypeVariable vl) (TypeVariable v) = case lookupVar d v of
   Just te'@(TypeVariable v') ->
     if vl == v' -- If we find a type variable in the context, it has to be equal to the type variable
       then success d
       else failure ("Type variable `" ++ v ++ "` has been set to the type variable  `" ++ v' ++ "` which is not equal to the type variable `" ++ vl ++ "`")
   Just te' -> failure ("Type variable `" ++ v ++ "` has been set to `" ++ show te' ++ "` which is not type variable `" ++ vl ++ "`.")
-  Nothing -> success (pushVar d v l) -- otherwise, we set the type variable to our left type variable
+  Nothing -> success (pushVar d v (TypeVariable vl)) -- otherwise, we set the type variable to our left type variable
 _stp d l (TypeVariable v) = case lookupVar d v of
-  Just te' -> _stp d l te' /// show te' -- If the type variable has already been specialized, check for subtype
+  Just te' -> _stp d l te' -- If the type variable has already been specialized, check for subtype
   Nothing -> success (pushVar d v l) -- otherwise, specialize the type variable
 _stp d (TypeFunction fr to) (TypeFunction fr' to') = do
   d <- _stp' d fr fr' -- Froms have to be subtypes
@@ -54,9 +55,36 @@ _stp' d (TypeTerm ttg te) (TypeTerm ttg' te') =
 
 -- | Go through the type expression and substitute all type variables from the context
 substTypeVars :: TypingContext TypeExpr -> TypeExpr -> TypeExpr
-substTypeVars d te@(TypeVariable v) = fromMaybe te (lookupVar d v)
-substTypeVars d te@(TypeFunction (TypeTerm ttg frte) to) = TypeFunction (TypeTerm ttg (substTypeVars d frte)) (substTypeVars d to)
-substTypeVars d te = te
+substTypeVars d te = stv (cleanupTypeVarSubsts d) te
+  where
+    stv d te@(TypeVariable v) = fromMaybe te (lookupVar d v)
+    stv d te@(TypeFunction (TypeTerm ttg frte) to) = TypeFunction (TypeTerm ttg (stv d frte)) (stv d to)
+    stv d te = te
+
+-- | Go through the typing context and unify all type variables on the right
+--   as one of the type variables it should be substituted in for.
+--   This is to prevent getting collisions between type variables coming from outside.
+--   For example in an expression like:
+--   @((\f:(b->d).\g:(b->c).\z:c.\y:b.\x:a.(x)) $ f = id $ g = id)@
+--   we have to ensure that in the resulting type expression, we do not accidentially
+--   get the @a@ from @id@ appearing inside our expression on the left, since it is different from the @a@
+--   we have there.
+--   Instead, e.g. for @f@ instead of the substition @b:=a , d:=a@ we do simply @d:=b@.
+cleanupTypeVarSubsts :: TypingContext TypeExpr -> TypingContext TypeExpr
+cleanupTypeVarSubsts d = Map.fromList (ctvs (Map.toList d))
+  where
+    -- | Go through the typing context, and if we encounter a type variable on the right,
+    --   search for other variables that have the same type variable as substituation and instead
+    --   substitute our first encountered variable for it.
+    ctvs ((k, TypeVariable v : _) : ds) = ctvs ds ++ ctvs' k v ds -- append our updates to the list for @Map.fromList@ later
+    ctvs (e : es) = e : ctvs es -- If we didn't meet a type variable, descend
+    ctvs [] = []
+
+    -- | Go through the typing context and find variables that should be substituted with
+    --   the same type variable as @k@ and replace their substituation instead with one to @k@.
+    ctvs' k v (e@(k', TypeVariable v' : r) : es) | v == v' = [(k', TypeVariable k : r)] 
+    ctvs' k v (_ : es) = ctvs' k v es
+    ctvs' k v [] = []
 
 -- | Try to find an argument in Left that fits the type term Right.
 --   Return reduced and specialized Left
@@ -69,7 +97,7 @@ applyArg fn ag = do
     aa (TypeFunction fr@(TypeTerm ttg te) to) ag@(TypeTerm ttg' te') =
       if ttg' <<= ttg -- Type tag of the argument has to be less than the type tag of the variable
         then case subTypePoly te' te of -- Check that the type itself fits
-          Right d -> success (d, to) -- Return the remaining function and the specialized argument
+          Right d -> success (d, to)
           f@(Left _) ->
             descend |++ failure ("The type tag of `" ++ show fr ++ "` suits the type tag of `" ++ show ag ++ "`, but their types do not.") |++ f
         else descend |++ failure ("The type tag of the variable `" ++ show fr ++ "` is smaller than the type tag of the argument `" ++ show ag ++ "`.")

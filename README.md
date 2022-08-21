@@ -2,7 +2,7 @@
 
 An implementation of parsing / type-checking / type-inference for a polymorphic Simply Typed Lambda Calculus (STLC) modulo isomorphism.
 
-_polymorphic_ here is meant specifically in the sense of System F. Due to type annotations being mandatory, type inference is decidable and straightforward.
+_polymorphic_ here is meant specifically in the sense of System F. Due to type annotations being mandatory however, type inference is decidable and straightforward.
 
 _modulo isomorphism_ means that we treat isomorphic functions as equal. In practical terms, this means that the order of a function's arguments do not matter. In an application, instead of checking the right side against the outermost abstraction on the left, the left side is descended into in search for any sub-abstraction that accepts the given argument. To disambiguate between different arguments of the same type, types are potentially tagged which can be (but doesn't have to) referred to in application. In defining an abstraction, the variables name itself is taken as its type's tag (e.g. `((\x:a.\y:a.x) $ y=0)`). Inside of a type annotation, type tags are simply annotated (`(\f:(Int -> k'Int -> Int).(f $ k=1729))`).
 
@@ -39,22 +39,11 @@ TypeFunction ::= "(" Froms "->" TypeExpr ")"
 
 Froms ::= TypeTerm | TypeTerm "->" Froms
 
-(Whitespace is entirely ignored in all terms)
+((Whitespace is entirely ignored in all terms))
 ```
 
 
-
 ## To-dos / open questions
-
-### Substituting type variables
-
-Fix a situation like `((\f:(b->b).\x:b.\y:a.(y)) $ id)`, where we end up substituting the `a` of `id` for `b`, and end up with `x'a->(y'a->a)`, i.e. our two different type variables end up becoming one.
-
-_Idea 1_ : Do not substitute type variables like normal types from the right, but rather keep the original names and just unify them under a new name. So if we have some `f:(b->c)` and are given `id` of type `a -> a`, don't substitute the `a` in for `b` and `c`, but rather not that e.g. `c` should now become `b`. Problem: How do we propagate this? 
-
-_Idea 2_ : Append some suffix to the type variables to ensure that they become unique. Problem: In something like `((\\f:(b->b).\\g:(c->c).\\z:c.\\x:b.\\y:a.(y)) $ id $ id)`, the `a`s of the two ids somehow have to be ensured to end up under different names.
- 
-_Idea 3_ : Use De Bruijn indexing.
 
 ## Ideas
 
