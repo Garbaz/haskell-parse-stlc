@@ -10,6 +10,7 @@ module TypeCheckIsom
   )
 where
 
+import Control.Applicative ((<|>))
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
 import LambdaTerm
@@ -49,42 +50,36 @@ _stp _ l r = failure ("The type expression `" ++ show l ++ "` can not be used in
 
 _stp' :: TypingContext TypeExpr -> TypeTerm -> TypeTerm -> Result (TypingContext TypeExpr)
 _stp' d (TypeTerm ttg te) (TypeTerm ttg' te') =
-  if ttg' <<= ttg -- The left tag has to be smaller than the right tag, not the otehr way round
+  if ttg' <== ttg -- The left tag has to be smaller than the right tag, not the otehr way round
     then _stp d te te'
     else failure ("The type tag `" ++ show ttg ++ "` is bigger than the type tag `" ++ show ttg' ++ "`.")
 
 -- | Go through the type expression and substitute all type variables from the context
 substTypeVars :: TypingContext TypeExpr -> TypeExpr -> TypeExpr
-substTypeVars d te = stv (cleanupTypeVarSubsts d) te
+substTypeVars d te = stv (decollideTypeVarSubsts d) te
   where
     stv d te@(TypeVariable v) = fromMaybe te (lookupVar d v)
     stv d te@(TypeFunction (TypeTerm ttg frte) to) = TypeFunction (TypeTerm ttg (stv d frte)) (stv d to)
     stv d te = te
 
 -- | Go through the typing context and unify all type variables on the right
---   as one of the type variables it should be substituted in for.
+--   as one of the type variables it should be substituted in for on the left.
 --   This is to prevent getting collisions between type variables coming from outside.
 --   For example in an expression like:
---   @((\f:(b->d).\g:(b->c).\z:c.\y:b.\x:a.(x)) $ f = id $ g = id)@
+--   @((\f:(b->d).\g:(b->c).\x:a.(x)) $ f = id $ g = id)@
 --   we have to ensure that in the resulting type expression, we do not accidentially
 --   get the @a@ from @id@ appearing inside our expression on the left, since it is different from the @a@
---   we have there.
---   Instead, e.g. for @f@ instead of the substition @b:=a , d:=a@ we do simply @d:=b@.
-cleanupTypeVarSubsts :: TypingContext TypeExpr -> TypingContext TypeExpr
-cleanupTypeVarSubsts d = Map.fromList (ctvs (Map.toList d))
+--   we have there, and also mutually different between the @f = id@ and @g = id@.
+--   So for e.g. @f@ instead of the substition @b:=a , d:=a@ we do simply @d:=b@.
+decollideTypeVarSubsts :: TypingContext TypeExpr -> TypingContext TypeExpr
+decollideTypeVarSubsts d = Map.fromList (dtvs (Map.toList d))
   where
-    -- | Go through the typing context, and if we encounter a type variable on the right,
-    --   search for other variables that have the same type variable as substituation and instead
-    --   substitute our first encountered variable for it.
-    ctvs ((k, TypeVariable v : _) : ds) = ctvs ds ++ ctvs' k v ds -- append our updates to the list for @Map.fromList@ later
-    ctvs (e : es) = e : ctvs es -- If we didn't meet a type variable, descend
-    ctvs [] = []
-
-    -- | Go through the typing context and find variables that should be substituted with
-    --   the same type variable as @k@ and replace their substituation instead with one to @k@.
-    ctvs' k v (e@(k', TypeVariable v' : r) : es) | v == v' = [(k', TypeVariable k : r)] 
-    ctvs' k v (_ : es) = ctvs' k v es
-    ctvs' k v [] = []
+    dtvs ((k, TypeVariable v : _) : ds) = dtvs ds ++ dtvs' k v ds -- append our updates to the list for @Map.fromList@ later
+    dtvs (e : es) = e : dtvs es -- If we didn't meet a type variable, descend
+    dtvs [] = []
+    dtvs' k v (e@(k', TypeVariable v' : r) : es) | v == v' = [(k', TypeVariable k : r)]
+    dtvs' k v (_ : es) = dtvs' k v es
+    dtvs' k v [] = []
 
 -- | Try to find an argument in Left that fits the type term Right.
 --   Return reduced and specialized Left
@@ -95,7 +90,7 @@ applyArg fn ag = do
   where
     aa :: TypeExpr -> TypeTerm -> Result (TypingContext TypeExpr, TypeExpr)
     aa (TypeFunction fr@(TypeTerm ttg te) to) ag@(TypeTerm ttg' te') =
-      if ttg' <<= ttg -- Type tag of the argument has to be less than the type tag of the variable
+      if ttg' <== ttg -- Type tag of the argument has to be less than the type tag of the variable
         then case subTypePoly te' te of -- Check that the type itself fits
           Right d -> success (d, to)
           f@(Left _) ->
@@ -130,7 +125,7 @@ typeCheckIsom _ lt tt = failure ("The lambda term `" ++ show lt ++ "` does not f
 
 -- | Check whether the lambda term has the type in the context
 typeCheckIsom' :: TypingContext TypeExpr -> LambdaTerm -> TypeTerm -> Result TypeTerm
-typeCheckIsom' g (LambdaTerm ltg le) (TypeTerm ttg te) = TypeTerm (ltg ||= ttg) <$> typeCheckIsom g le te
+typeCheckIsom' g (LambdaTerm ltg le) (TypeTerm ttg te) = TypeTerm (ltg <|> ttg) <$> typeCheckIsom g le te
 
 -- | Infer the type of the lambda expression in the context
 typeInferIsom :: TypingContext TypeExpr -> LambdaExpr -> Result TypeExpr

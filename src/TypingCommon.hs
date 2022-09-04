@@ -4,9 +4,9 @@ module TypingCommon
     lookupVar,
     pushVar,
     (?>>),
-    (||=),
+    -- (||=),
     (>>=?),
-    (<<=),
+    (<==),
     Result,
     failure,
     success,
@@ -20,6 +20,7 @@ import Data.Maybe (fromMaybe, isNothing)
 import LambdaTerm
 import TypeTerm
 import Debug.Trace (traceShow)
+import Control.Applicative (Alternative (empty))
 
 (///) :: Show a => b -> a -> b
 (///) x y = if debugEnabled then traceShow y x else x
@@ -53,14 +54,14 @@ pushVar :: TypingContext a -> String -> a -> TypingContext a
 pushVar g v t = Map.insert v (t : fromMaybe [] (Map.lookup v g)) g
 
 -- | If the condition is true, return right
---   otherwise return nothing
-(?>>) :: Bool -> Maybe a -> Maybe a
-(?>>) p x = if p then x else Nothing
+--   otherwise return empty
+(?>>) :: Alternative f => Bool -> f a -> f a
+(?>>) p x = if p then x else empty
 
--- | Return left if Just, otherwise return right
-(||=) :: Maybe a -> Maybe a -> Maybe a
-(||=) Nothing d = d
-(||=) x _ = x
+-- -- | Return left if Just, otherwise return right
+-- (||=) :: Maybe a -> Maybe a -> Maybe a
+-- (||=) Nothing d = d
+-- (||=) x _ = x
 
 -- | If given Nothing, return False; If given Just, apply function
 (>>=?) :: Maybe a -> (a -> Bool) -> Bool
@@ -69,5 +70,5 @@ pushVar g v t = Map.insert v (t : fromMaybe [] (Map.lookup v g)) g
 
 -- | Either the left term should be nothing,
 --   or the terms should be equal.
-(<<=) :: Eq a => Maybe a -> Maybe a -> Bool
-(<<=) x y = isNothing x || x == y
+(<==) :: Eq a => Maybe a -> Maybe a -> Bool
+(<==) x y = isNothing x || x == y
