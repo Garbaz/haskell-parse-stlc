@@ -11,7 +11,6 @@ _modulo isomorphism_ means that we treat isomorphic functions as equal. In pract
 This is not quite the standard lambda calculus syntax, and has somewhat unnecessary requirements for bracketing due to the parser being written with Haskell's `ReadP` parser combinator, and not something more sensible that can handle left recursive grammars. In particular, application always has to be enclosed in brackets. However, multiple applications in a row can simply be written as a chain (Same thing with function type annotations). The `$` for application is simply because I don't want the language to be whitespace sensitive.
 
 ```ebnf
-
 Expr ::= Const | Variable | Abstr | Appl | Let
 
 Const    ::= unit | true | false | <numeral> | add | mul | lt | or | and | not | id | cond
@@ -40,6 +39,23 @@ TypeFunction ::= "(" Froms "->" TypeExpr ")"
 Froms ::= TypeTerm | TypeTerm "->" Froms
 
 ((Whitespace is entirely ignored in all terms))
+```
+
+### Types of constants
+
+```julia
+unit : Unit
+true  : Bool
+false : Bool
+<numeral> : Int
+add : x'Int -> y'Int -> Int
+mul : x'Int -> y'Int -> Int
+lt : x'Int -> y'Int -> Bool
+or  : x'Bool -> y'Bool -> Bool
+and : x'Bool -> y'Bool -> Bool
+not : x'Bool -> Bool
+id  : x'a -> a 
+cond : if'Bool -> then'a -> else'a -> a
 ```
 
 
