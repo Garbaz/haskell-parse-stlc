@@ -1,0 +1,5 @@
+(\x:Int.
+ \m:(Bool -> k'Int -> a).
+ (m $ k = x)
+$ (\k:Int.\q:Bool.q)
+)

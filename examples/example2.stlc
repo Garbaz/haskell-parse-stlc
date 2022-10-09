@@ -1,0 +1,11 @@
+[
+    applymult :=
+        \x:Int.
+        \y:Int.
+        \f:(Int -> Int).
+        (
+            mul $ (f $ x) $ (f $ y)
+        )
+](
+    applymult $ (add $ 1)
+)

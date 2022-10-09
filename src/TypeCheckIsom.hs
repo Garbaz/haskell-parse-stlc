@@ -42,10 +42,10 @@ _stp d (TypeVariable vl) (TypeVariable v) = case lookupVar d v of
 _stp d l (TypeVariable v) = case lookupVar d v of
   Just te' -> _stp d l te' -- If the type variable has already been specialized, check for subtype
   Nothing -> success (pushVar d v l) -- otherwise, specialize the type variable
-_stp d (TypeFunction fr to) (TypeFunction fr' to') = do
-  d <- _stp' d fr fr' -- Froms have to be subtypes
-  d <- _stp d to to' -- And tos have to to be subtypes, in the new context developed by the froms
-  success d
+_stp d l@(TypeFunction fr to) r@(TypeFunction fr' to') = do
+  case applyArg' l fr' of -- If we can find an argument in left which suits the first argument in right
+    Right (d, te) -> _stp d te to' -- then descend to make sure that the reduced left can take the remaining arguments
+    (Left s) -> failure s -- otherwise, we have to fail
 _stp _ l r = failure ("The type expression `" ++ show l ++ "` can not be used in a place expecting `" ++ show r ++ "`.")
 
 _stp' :: TypingContext TypeExpr -> TypeTerm -> TypeTerm -> Result (TypingContext TypeExpr)
@@ -82,25 +82,27 @@ decollideTypeVarSubsts d = Map.fromList (dtvs (Map.toList d))
     dtvs' k v [] = []
 
 -- | Try to find an argument in Left that fits the type term Right.
---   Return reduced and specialized Left
+--   Returns reduced and specialized Left.
 applyArg :: TypeExpr -> TypeTerm -> Result TypeExpr
 applyArg fn ag = do
-  (d, te) <- aa fn ag
+  (d, te) <- applyArg' fn ag
   success (substTypeVars d te)
+
+-- | Try to find an argument in Left that fits the type term Right.
+--   Returns resulting typing context and reduced and specialized Left.
+applyArg' :: TypeExpr -> TypeTerm -> Result (TypingContext TypeExpr, TypeExpr)
+applyArg' (TypeFunction fr@(TypeTerm ttg te) to) ag@(TypeTerm ttg' te') =
+  if ttg' <== ttg -- Type tag of the argument has to be less than the type tag of the variable
+    then case subTypePoly te' te of -- Check that the type itself fits
+      Right d -> success (d, to)
+      f@(Left _) ->
+        descend |++ failure ("The type tag of `" ++ show fr ++ "` suits the type tag of `" ++ show ag ++ "`, but their types do not.") |++ f
+    else descend |++ failure ("The type tag of the variable `" ++ show fr ++ "` is smaller than the type tag of the argument `" ++ show ag ++ "`.")
   where
-    aa :: TypeExpr -> TypeTerm -> Result (TypingContext TypeExpr, TypeExpr)
-    aa (TypeFunction fr@(TypeTerm ttg te) to) ag@(TypeTerm ttg' te') =
-      if ttg' <== ttg -- Type tag of the argument has to be less than the type tag of the variable
-        then case subTypePoly te' te of -- Check that the type itself fits
-          Right d -> success (d, to)
-          f@(Left _) ->
-            descend |++ failure ("The type tag of `" ++ show fr ++ "` suits the type tag of `" ++ show ag ++ "`, but their types do not.") |++ f
-        else descend |++ failure ("The type tag of the variable `" ++ show fr ++ "` is smaller than the type tag of the argument `" ++ show ag ++ "`.")
-      where
-        descend = do
-          (d, te) <- aa to ag
-          success (d, TypeFunction fr te)
-    aa fn ag = failure ("Could not find an argument that fits `" ++ show ag ++ "`")
+    descend = do
+      (d, te) <- applyArg' to ag
+      success (d, TypeFunction fr te)
+applyArg' fn ag = failure ("Could not find an argument that fits `" ++ show ag ++ "`")
 
 -- | Could Left be used in a place expecting Right?
 --   Returns the specialized type expression.
@@ -109,7 +111,7 @@ applyArg fn ag = do
   d <- subTypePoly te te'
   success (substTypeVars d te')
 
--- | Check whether the lambda expression has the type in the context
+-- | Check whether the lambda expression has the type in the context.
 typeCheckIsom :: TypingContext TypeExpr -> LambdaExpr -> TypeExpr -> Result TypeExpr
 typeCheckIsom g (Variable v) te = case lookupVar g v of -- Look for variable type in emptyContext
   Just te' -> te' <: te -- Do the types fit?
@@ -123,11 +125,11 @@ typeCheckIsom g (Application fn ag) te = do
   rx <: te -- If it succeds, make sure the resulting types fit
 typeCheckIsom _ lt tt = failure ("The lambda term `" ++ show lt ++ "` does not fit the type term `" ++ show tt ++ "`.")
 
--- | Check whether the lambda term has the type in the context
+-- | Check whether the lambda term has the type in the context.
 typeCheckIsom' :: TypingContext TypeExpr -> LambdaTerm -> TypeTerm -> Result TypeTerm
 typeCheckIsom' g (LambdaTerm ltg le) (TypeTerm ttg te) = TypeTerm (ltg <|> ttg) <$> typeCheckIsom g le te
 
--- | Infer the type of the lambda expression in the context
+-- | Infer the type of the lambda expression in the context.
 typeInferIsom :: TypingContext TypeExpr -> LambdaExpr -> Result TypeExpr
 typeInferIsom g (Variable v) = case lookupVar g v of
   Just lute -> success lute
@@ -145,6 +147,6 @@ typeInferIsom g (Let lv le lb) = do
   te' <- typeInferIsom (pushVar g lv te) lb
   success te'
 
--- | Infer the type of the lambda term in the context
+-- | Infer the type of the lambda term in the context.
 typeInferIsom' :: TypingContext TypeExpr -> LambdaTerm -> Result TypeTerm
 typeInferIsom' g (LambdaTerm ltg le) = TypeTerm ltg <$> typeInferIsom g le
