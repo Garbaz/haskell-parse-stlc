@@ -90,21 +90,21 @@ Note that if you paste any example into a string in `ghci`, you have to escape t
 
 ### Example 1
 
-```
+```julia
 \x:a.x
 ```
 `: x'a -> a`
 
 A polymorphic identity function. The argument being named `x` means that it's type is tagged as `x'a`. We can apply it either to an argument of some type `a`:
 
-```
+```julia
 (\x:a.(x) $ 0)
 ```
 `: Int`
 
 or some type `x'a`:
 
-```
+```julia
 (\x:a.(x) $ x = 0)
 ```
 `:Int`
@@ -114,7 +114,7 @@ This identity function `\x:a.x` is built into the language as a constant `id`.
 
 ### Example 2
 
-```
+```julia
 \x:Int.
 \y:Int.
 \f:(Int -> Int).
@@ -124,7 +124,7 @@ This identity function `\x:a.x` is built into the language as a constant `id`.
 
 The above function takes two integers `x` and `y` and a unary function from integer to integer. It first applies the function to both `x` and `y`, before multiplying the results. We can give the function a name as follows:
 
-```
+```julia
 [
     applymult :=
         \x:Int.
@@ -139,7 +139,7 @@ The above function takes two integers `x` and `y` and a unary function from inte
 
 Now in the last pair of `()`, which currently just contains `applymult`, we can simply use the function by this label in any way we like. For example, we can partially apply it:
 
-```
+```julia
 [
     applymult :=
         \x:Int.
@@ -154,7 +154,7 @@ Now in the last pair of `()`, which currently just contains `applymult`, we can 
 
 However, what if we want to partially apply the function on it's last argument, the `Int->Int` function? That's simple, we just have to pass such a function:
 
-```
+```julia
 [
     applymult :=
         \x:Int.
@@ -170,17 +170,18 @@ However, what if we want to partially apply the function on it's last argument, 
 Notice that we did not even have to specify `f=(add $ 1)` in the application. Since there is no way for the type `Int -> Int` to be mistaken for `x'Int` or `y'Int`, it automatically is handed to the right argument `f'(Int->Int)`.
 
 Or more formally, the language does consider the types
-```
+
+```julia
 (x'Int -> y'Int -> f'(Int->Int) -> Int)
 ```
 
 and
 
-```
+```julia
 (f'(Int->Int) -> x'Int -> y'Int -> Int)
 ```
 
-to be isomorphic to each other, so applying a function of the former type to an `Int -> Int` argument means that we simply treat it as if it had if it had the latter type.
+to be isomorphic to each other, so giving a function of the former type an `Int -> Int` argument means that we simply treat the function as if it had the latter type.
 
 
 ### Example 3
@@ -189,14 +190,14 @@ However of course many function do not have all mutually unique arguments, and s
 
 For example:
 
-```
+```julia
 cond
 ```
 `: (if'Bool -> then'a -> else'a -> a)`
 
 is a constant defined in the language which simply is the equivalent to the bespoke `if ... then ... else ...` expression in other languages. However with it being an ordinary function, we can use it as such, like partially applying it:
 
-```
+```julia
 (cond $ 0 $ 1)
 ```
 `: (if'Bool -> Int)`
@@ -212,7 +213,7 @@ And also notice that we did not specify whether the `then'a` or the `else'a` arg
 
 So far all type annotations of arguments were just ordinary untagged types, with them simply being tagged with the name of their argument in the type of the function as a whole. However, there is a kind of situation where we need to be able to specify type tags explicitly, like:
 
-```
+```julia
 \x:Int.
 \m:(Bool -> k'Int -> a).
 (m $ k = x)
@@ -221,7 +222,7 @@ So far all type annotations of arguments were just ordinary untagged types, with
 
 This means that any function `m` we wish to pass into the function would have to specifically take an argument of specifically type `k'Int` (and not e.g. `p'Int`), so that it makes sense for the function to be used in the body like `m $ k = x`. For example:
 
-```
+```julia
 (\x:Int.
  \m:(Bool -> k'Int -> a).
  (m $ k = x)
@@ -234,25 +235,25 @@ Note that we neither have to specify that we mean the argument `m` in the applic
 
 This means we are using the isomorphism of function types twice here, and in slightly different ways. For the application itself, we treat the type
 
-```
+```julia
 x'Int -> m'(Bool -> k'Int -> a) -> Int -> a
 ```
 
 as if it were
 
-```
+```julia
 m'(Bool -> k'Int -> a) -> x'Int -> Int -> a
 ```
 
 and for the argument `m`, we treat the type
 
-```
+```julia
 k'Int -> q'Bool -> Bool
 ```
 
 as if it were
 
-```
+```julia
 Bool -> k'Int -> a
 ```
 
