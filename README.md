@@ -2,9 +2,16 @@
 
 An implementation of parsing / type-checking / type-inference for a polymorphic Simply Typed Lambda Calculus (STLC) modulo isomorphism.
 
-_polymorphic_ here specifically means Rank 1 parametric impredicative polymorphism. Due to type annotations being mandatory, type inference is decidable and straightforward.
+_modulo isomorphism_ here means that we treat isomorphic functions as equal. In practical terms, this means that the order of a function's arguments do not matter. In an application, instead of checking the right side against the outermost abstraction on the left, the left side is descended into in search for any sub-abstraction that accepts the given argument. To disambiguate between different arguments of the same type, types are potentially tagged, which can be (but doesn't have to) referred to in application. In defining an abstraction, the variable's name itself is taken as its type's tag (e.g. `((\x:a.\y:a.x) $ y=0)`). Inside of a type annotation, type tags are simply annotated (`(\f:(Int -> k'Int -> Int).(f $ k=1729))`).
 
-_modulo isomorphism_ means that we treat isomorphic functions as equal. In practical terms, this means that the order of a function's arguments do not matter. In an application, instead of checking the right side against the outermost abstraction on the left, the left side is descended into in search for any sub-abstraction that accepts the given argument. To disambiguate between different arguments of the same type, types are potentially tagged, which can be (but doesn't have to) referred to in application. In defining an abstraction, the variable's name itself is taken as its type's tag (e.g. `((\x:a.\y:a.x) $ y=0)`). Inside of a type annotation, type tags are simply annotated (`(\f:(Int -> k'Int -> Int).(f $ k=1729))`).
+
+## Polymorphism
+
+Instead of specifying a concrete type in a type signature of a variable, a type variable can be given. E.g. `\x:a.x` is an identity function that can be applied to any value of any concrete type, it is of type `x'a -> a`. When applied, the concrete type will be substituted in for the type variable. E.g. in `(\x:a.x $ 0)` we substitute in the type `Int` for `a`, so the type of the result will be `Int`.
+
+A type variable can also be substituted with another type variable. E.g. while in `\f:(a->b).\x:a.(f $ x)` the type variables `a` and `b` are independent, so the type of the expression is `f'(a->b) -> a -> b`, in `(\f:(a->b).\x:a.(f $ x) $ f = \x:a.x)`, the application causes `a` and `b` to have to be equal, so the type of the expression is `x'a -> a`.
+
+However, a polymorphic function can not be substituted in for a type variable. E.g. `(\x:a.x $ \y:b.y)` will not type check, since the type we would like to substitute in for `a` is `y'b -> b`, a polymorphic function. However, the expression `(\x:a.x $ \y:Int.y)` does type check, since the type we substitute in for `a` is a concrete function type, namely `y'Int -> Int`.
 
 
 ## Grammar
@@ -218,7 +225,7 @@ So far all type annotations of arguments were just ordinary untagged types, with
 \m:(Bool -> k'Int -> a).
 (m $ k = x)
 ```
-`: x'Int -> m'(Bool -> k'Int -> a) -> Int -> a`
+`: x'Int -> m'(Bool -> k'Int -> a) -> Bool -> a`
 
 This means that any function `m` we wish to pass into the function would have to specifically take an argument of specifically type `k'Int` (and not e.g. `p'Int`), so that it makes sense for the function to be used in the body like `m $ k = x`. For example:
 

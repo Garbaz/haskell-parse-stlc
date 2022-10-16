@@ -39,13 +39,27 @@ _stp d (TypeVariable vl) (TypeVariable v) = case lookupVar d v of
       else failure ("Type variable `" ++ v ++ "` has been set to the type variable  `" ++ v' ++ "` which is not equal to the type variable `" ++ vl ++ "`")
   Just te' -> failure ("Type variable `" ++ v ++ "` has been set to `" ++ show te' ++ "` which is not type variable `" ++ vl ++ "`.")
   Nothing -> success (pushVar d v (TypeVariable vl)) -- otherwise, we set the type variable to our left type variable
-_stp d l (TypeVariable v) = case lookupVar d v of
-  Just te' -> _stp d l te' -- If the type variable has already been specialized, check for subtype
-  Nothing -> success (pushVar d v l) -- otherwise, specialize the type variable
+_stp d l (TypeVariable v) =
+  if containsTypeVariable l
+    then failure ("The type expression `" ++ show l ++ "` is polymorphic and can therefore not be substituted in for the type variable `" ++ v ++ "`")
+    else case lookupVar d v of
+      Just te' -> _stp d l te' -- If the type variable has already been specialized, check for subtype
+      Nothing -> success (pushVar d v l) -- otherwise, specialize the type variable
+  where
+    containsTypeVariable :: TypeExpr -> Bool
+    containsTypeVariable (TypeVariable _) = True
+    containsTypeVariable (TypeFunction (TypeTerm _ fr) to) = containsTypeVariable fr || containsTypeVariable to
+    containsTypeVariable _ = False
 _stp d l@(TypeFunction fr to) r@(TypeFunction fr' to') = do
   case applyArg' l fr' of -- If we can find an argument in left which suits the first argument in right
-    Right (d, te) -> _stp d te to' -- then descend to make sure that the reduced left can take the remaining arguments
+    Right (d, te) -> _stp (invertTypingContext d) te to' /// (show l ++ ",," ++ show fr' ++ ",, " ++ show te ++ ",," ++ show d) -- then descend to make sure that the reduced left can take the remaining arguments
     (Left s) -> failure s -- otherwise, we have to fail
+  where
+    invertTypingContext :: TypingContext TypeExpr -> TypingContext TypeExpr
+    invertTypingContext d = Map.fromList (itc (Map.toList d))
+    itc ((k, TypeVariable v : _) : ds) = (v, [TypeVariable k]) : itc ds
+    itc (_ : ds) = itc ds
+    itc [] = []
 _stp _ l r = failure ("The type expression `" ++ show l ++ "` can not be used in a place expecting `" ++ show r ++ "`.")
 
 _stp' :: TypingContext TypeExpr -> TypeTerm -> TypeTerm -> Result (TypingContext TypeExpr)
