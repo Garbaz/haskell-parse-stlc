@@ -52,7 +52,7 @@ _stp d l (TypeVariable v) =
     containsTypeVariable _ = False
 _stp d l@(TypeFunction fr to) r@(TypeFunction fr' to') = do
   case applyArg' l fr' of -- If we can find an argument in left which suits the first argument in right
-    Right (d, te) -> _stp (invertTypingContext d) te to' /// (show l ++ ",," ++ show fr' ++ ",, " ++ show te ++ ",," ++ show d) -- then descend to make sure that the reduced left can take the remaining arguments
+    Right (d, te) -> _stp (invertTypingContext d) te to' -- then descend to make sure that the reduced left can take the remaining arguments
     (Left s) -> failure s -- otherwise, we have to fail
   where
     invertTypingContext :: TypingContext TypeExpr -> TypingContext TypeExpr
